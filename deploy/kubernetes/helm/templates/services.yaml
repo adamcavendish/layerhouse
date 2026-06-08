@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}
+  namespace: {{ include "layerhouse.namespace" . }}
   labels:
-    {{- include "orb-chrysa.labels" . | nindent 4 }}
+    {{- include "layerhouse.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -19,7 +19,7 @@ spec:
     {{- toYaml .Values.service.sessionAffinityConfig | nindent 4 }}
   {{- end }}
   selector:
-    app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+    app.kubernetes.io/name: {{ include "layerhouse.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - name: registry
@@ -32,15 +32,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}-headless
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}-headless
+  namespace: {{ include "layerhouse.namespace" . }}
   labels:
-    {{- include "orb-chrysa.labels" . | nindent 4 }}
+    {{- include "layerhouse.labels" . | nindent 4 }}
 spec:
   clusterIP: None
   publishNotReadyAddresses: true
   selector:
-    app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+    app.kubernetes.io/name: {{ include "layerhouse.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - name: raft

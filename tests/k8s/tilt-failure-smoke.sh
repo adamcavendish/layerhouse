@@ -3,10 +3,10 @@ set -euo pipefail
 
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 RUN_SLUG="$(printf '%s' "$RUN_ID" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9-' '-')"
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
-NODE_PULL_ENDPOINT="${NODE_PULL_ENDPOINT:-orb-chrysa.$NAMESPACE.svc.cluster.local:5050}"
+NODE_PULL_ENDPOINT="${NODE_PULL_ENDPOINT:-layerhouse.$NAMESPACE.svc.cluster.local:5050}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
 KANIDM_URL="${KANIDM_URL:-https://localhost:$KANIDM_HOST_PORT}"
 EVIDENCE_ROOT="${EVIDENCE_ROOT:-target/tilt/evidence}"
@@ -68,7 +68,7 @@ install_node_pull_host_alias() {
     local service_host="${NODE_PULL_ENDPOINT%:*}"
     local service_ip
 
-    service_ip="$(kubectl -n "$NAMESPACE" get svc orb-chrysa -o jsonpath='{.spec.clusterIP}')"
+    service_ip="$(kubectl -n "$NAMESPACE" get svc layerhouse -o jsonpath='{.spec.clusterIP}')"
     record docker exec "$node" sh -ec "grep -q ' $service_host' /etc/hosts || printf '%s %s\\n' '$service_ip' '$service_host' >> /etc/hosts"
 }
 
@@ -92,7 +92,7 @@ pod_container_task() {
     local container_id
 
     node="$(kubectl -n "$NAMESPACE" get pod "$pod" -o jsonpath='{.spec.nodeName}')"
-    container_id="$(kubectl -n "$NAMESPACE" get pod "$pod" -o jsonpath='{.status.containerStatuses[?(@.name=="orb-chrysa")].containerID}' | sed 's|containerd://||')"
+    container_id="$(kubectl -n "$NAMESPACE" get pod "$pod" -o jsonpath='{.status.containerStatuses[?(@.name=="layerhouse")].containerID}' | sed 's|containerd://||')"
     if [ -z "$node" ] || [ -z "$container_id" ]; then
         echo "ERROR: could not resolve node/container for $pod" >&2
         return 1
@@ -131,9 +131,9 @@ resume_all_paused_tasks() {
 }
 
 start_pod0_port_forward() {
-    local pod_fqdn="orb-chrysa.$NAMESPACE.svc.cluster.local"
+    local pod_fqdn="layerhouse.$NAMESPACE.svc.cluster.local"
 
-    kubectl -n "$NAMESPACE" port-forward --address 127.0.0.1 pod/orb-chrysa-0 "$LOCAL_STATUS_PORT:5050" \
+    kubectl -n "$NAMESPACE" port-forward --address 127.0.0.1 pod/layerhouse-0 "$LOCAL_STATUS_PORT:5050" \
         > "$WORK/pod0-port-forward.log" 2>&1 &
     PORT_FORWARD_PID="$!"
     sleep 2
@@ -193,7 +193,7 @@ wait_for_quorum_loss() {
     done
 
     stop_pod0_port_forward
-    echo "ERROR: two paused Orb Chrysa pods did not produce quorum-loss status or write failure" >&2
+    echo "ERROR: two paused Layerhouse pods did not produce quorum-loss status or write failure" >&2
     cat "$WORK/two-pod-quorum-loss.json" >&2 2>/dev/null || true
     cat "$WORK/two-pod-write-during-quorum-loss.json" >&2 2>/dev/null || true
     return 1
@@ -213,8 +213,8 @@ cleanup() {
         fi
     fi
     kubectl -n "$NAMESPACE" delete pod "orb-no-secret-$RUN_SLUG" "orb-with-secret-$RUN_SLUG" --ignore-not-found >/dev/null 2>&1
-    kubectl -n "$NAMESPACE" delete secret "orb-chrysa-pull-$RUN_SLUG" --ignore-not-found >/dev/null 2>&1
-    kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=180s >/dev/null 2>&1
+    kubectl -n "$NAMESPACE" delete secret "layerhouse-pull-$RUN_SLUG" --ignore-not-found >/dev/null 2>&1
+    kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=180s >/dev/null 2>&1
     if [ "$status" -eq 0 ]; then
         echo "PASS Tilt failure smoke. Evidence: $WORK"
     else
@@ -244,7 +244,7 @@ need tee
     echo "NODE_PULL_IMAGE=$NODE_PULL_IMAGE"
 } > "$WORK/summary.env"
 
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=240s
 install_node_trust
 # Push imports the test image into the first kind node. Use a different node
 # for the trust-removal pull so a local image cache cannot mask TLS failure.
@@ -253,8 +253,8 @@ install_node_pull_host_alias "$NODE"
 install_node_pull_trust
 restart_node_containerd "$NODE"
 
-CA="$WORK/orb-chrysa-ca.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
+CA="$WORK/layerhouse-ca.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
 CI_TOKEN="$(refresh_ci_bot_token)"
 PAT="$(create_pat "$CI_TOKEN" tilt-failure-smoke)"
 if [ -z "$PAT" ] || [ "$PAT" = "null" ]; then
@@ -309,7 +309,7 @@ if [ "${reason:-}" != "ErrImagePull" ] && [ "${reason:-}" != "ImagePullBackOff" 
     exit 1
 fi
 
-kubectl -n "$NAMESPACE" create secret docker-registry "orb-chrysa-pull-$RUN_SLUG" \
+kubectl -n "$NAMESPACE" create secret docker-registry "layerhouse-pull-$RUN_SLUG" \
     --docker-server="$REGISTRY_ENDPOINT" \
     --docker-username=ci-bot \
     --docker-password="$PAT" \
@@ -319,20 +319,20 @@ record kubectl -n "$NAMESPACE" run "orb-with-secret-$RUN_SLUG" \
     --image="$SMOKE_IMAGE" \
     --image-pull-policy=Always \
     --restart=Never \
-    --overrides="{\"spec\":{\"imagePullSecrets\":[{\"name\":\"orb-chrysa-pull-$RUN_SLUG\"}]}}" \
+    --overrides="{\"spec\":{\"imagePullSecrets\":[{\"name\":\"layerhouse-pull-$RUN_SLUG\"}]}}" \
     --command -- /bin/sh -c 'cat /hello.txt; sleep 5'
 record kubectl -n "$NAMESPACE" wait --for=condition=Ready "pod/orb-with-secret-$RUN_SLUG" --timeout=180s
 
 echo "=== Failure: one pod loss keeps quorum ==="
-record kubectl -n "$NAMESPACE" delete pod orb-chrysa-2 --wait=false
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
+record kubectl -n "$NAMESPACE" delete pod layerhouse-2 --wait=false
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=240s
 assert_cluster_healthy "$WORK/cluster-status-after-one-pod-loss.json"
 
 echo "=== Failure: two paused pods lose quorum ==="
-pause_pod orb-chrysa-1
-pause_pod orb-chrysa-2
+pause_pod layerhouse-1
+pause_pod layerhouse-2
 wait_for_quorum_loss
 resume_paused_tasks
 resume_all_paused_tasks
-record kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/orb-chrysa-1 pod/orb-chrysa-2 --timeout=180s
+record kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/layerhouse-1 pod/layerhouse-2 --timeout=180s
 assert_cluster_healthy "$WORK/cluster-status-after-two-pod-restore.json"

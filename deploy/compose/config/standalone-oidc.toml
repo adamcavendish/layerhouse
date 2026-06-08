@@ -1,13 +1,13 @@
-# Standalone orb-chrysa with OIDC authentication
+# Standalone layerhouse with OIDC authentication
 # Replace the URL placeholders with your IdP's values.
-# See docs: https://orb-chrysa.docs/authentication/bring-your-own-idp.html
+# See docs: https://layerhouse.docs/authentication/bring-your-own-idp.html
 
 [server]
 listen = "0.0.0.0:5050"
 
 [storage.s3]
 endpoint = "http://rustfs:9000"
-bucket = "orb-chrysa"
+bucket = "layerhouse"
 region = "us-east-1"
 access_key = "rustfsadmin"
 secret_key = "rustfsadmin"
@@ -16,12 +16,12 @@ path_style = true
 [raft]
 listen = "0.0.0.0:5051"
 data_dir = "/tmp/raft"
-discovery_dns = "orb-chrysa"
+discovery_dns = "layerhouse"
 
 [auth]
 issuer_url = "https://idp.example.com/realms/your-realm"
 issuer_internal_url = "https://idp.internal:8443/realms/your-realm"
-client_id = "orb-chrysa"
+client_id = "layerhouse"
 client_secret = "<your-client-secret>"
 token_endpoint_url = "https://registry.example.com/v2/token"
 redirect_uri = "https://registry.example.com/oauth2/callback"

@@ -2,8 +2,8 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}-server
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}-server
+  namespace: {{ include "layerhouse.namespace" . }}
 spec:
   secretName: {{ .Values.server.tls.existingSecret }}
   issuerRef:
@@ -11,8 +11,8 @@ spec:
     kind: {{ .Values.certManager.issuerRef.kind }}
     group: {{ .Values.certManager.issuerRef.group }}
   dnsNames:
-    - {{ include "orb-chrysa.fullname" . }}.{{ include "orb-chrysa.namespace" . }}.svc
-    - {{ include "orb-chrysa.fullname" . }}.{{ include "orb-chrysa.namespace" . }}.svc.cluster.local
+    - {{ include "layerhouse.fullname" . }}.{{ include "layerhouse.namespace" . }}.svc
+    - {{ include "layerhouse.fullname" . }}.{{ include "layerhouse.namespace" . }}.svc.cluster.local
     {{- range .Values.server.tls.dnsNames }}
     - {{ . | quote }}
     {{- end }}
@@ -20,8 +20,8 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}-raft
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}-raft
+  namespace: {{ include "layerhouse.namespace" . }}
 spec:
   secretName: {{ .Values.raft.tls.existingSecret }}
   issuerRef:
@@ -32,13 +32,13 @@ spec:
     - server auth
     - client auth
   dnsNames:
-    - {{ include "orb-chrysa.fullname" . }}-headless
-    - {{ include "orb-chrysa.fullname" . }}-headless.{{ include "orb-chrysa.namespace" . }}.svc
-    - "*.{{ include "orb-chrysa.fullname" . }}-headless"
-    - "*.{{ include "orb-chrysa.fullname" . }}-headless.{{ include "orb-chrysa.namespace" . }}.svc"
-    - "*.{{ include "orb-chrysa.fullname" . }}-headless.{{ include "orb-chrysa.namespace" . }}.svc.cluster.local"
+    - {{ include "layerhouse.fullname" . }}-headless
+    - {{ include "layerhouse.fullname" . }}-headless.{{ include "layerhouse.namespace" . }}.svc
+    - "*.{{ include "layerhouse.fullname" . }}-headless"
+    - "*.{{ include "layerhouse.fullname" . }}-headless.{{ include "layerhouse.namespace" . }}.svc"
+    - "*.{{ include "layerhouse.fullname" . }}-headless.{{ include "layerhouse.namespace" . }}.svc.cluster.local"
     {{- range $i := until (int .Values.replicaCount) }}
-    - {{ include "orb-chrysa.fullname" $ }}-{{ $i }}.{{ include "orb-chrysa.fullname" $ }}-headless.{{ include "orb-chrysa.namespace" $ }}.svc
-    - {{ include "orb-chrysa.fullname" $ }}-{{ $i }}.{{ include "orb-chrysa.fullname" $ }}-headless.{{ include "orb-chrysa.namespace" $ }}.svc.cluster.local
+    - {{ include "layerhouse.fullname" $ }}-{{ $i }}.{{ include "layerhouse.fullname" $ }}-headless.{{ include "layerhouse.namespace" $ }}.svc
+    - {{ include "layerhouse.fullname" $ }}-{{ $i }}.{{ include "layerhouse.fullname" $ }}-headless.{{ include "layerhouse.namespace" $ }}.svc.cluster.local
     {{- end }}
 {{- end }}

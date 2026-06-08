@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-28
 **Type**: Runtime product test plan
-**Source**: Auth implementation (kanidm + orb-chrysa internal token system)
+**Source**: Auth implementation (kanidm + layerhouse internal token system)
 **Scope**: OCI client auth, PAT lifecycle, dashboard OIDC, permission enforcement,
 multi-replica auth consistency
 **Branch**: HEAD
@@ -11,7 +11,7 @@ multi-replica auth consistency
 
 ## Product Contract Summary
 
-orb-chrysa supports authentication via kanidm as the identity provider. When `[auth]`
+layerhouse supports authentication via kanidm as the identity provider. When `[auth]`
 is configured in the registry config:
 
 - `/v2/` returns HTTP 401 with `Www-Authenticate: Bearer` challenge
@@ -68,7 +68,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 | Compose auth smoke | Automated | `just auth-smoke` | P0 | Implemented, opt-in local smoke | `/tmp/orb-auth-<run_id>` |
 | Kanidm OAuth2 client redirect/landing mapping | Automated | `AUTH16` via `just compose-auth-up` setup assertion | P0 | Implemented — `kanidm-setup.sh` fails if `oauth2_rs_origin` != the callback URL | compose `kanidm-setup` logs |
 | Browser OIDC login, session cookie, and dashboard API access | Agent-executable manual | `AUTH-MANUAL-OIDC-01` | P1 | Manual plan only; not automated because it requires an interactive browser identity flow | `/tmp/orb-auth-oidc-<run_id>` |
-| JWKS last-good cache trust window | Automated | `cargo test -p orb-chrysa-server auth::` | P1 | Implemented at unit level | command log |
+| JWKS last-good cache trust window | Automated | `cargo test -p layerhouse-server auth::` | P1 | Implemented at unit level | command log |
 | Live JWKS restart resilience with IdP outage | Agent-executable manual | `AUTH-MANUAL-JWKS-RESUME-01` | P1 | Manual plan only; not automated because it intentionally stops Kanidm during pod restart | `/tmp/orb-auth-jwks-resume-<run_id>` |
 | Cross-region ordered issuer/JWKS failover | Agent-executable manual | `AUTH-MANUAL-JWKS-XREGION-01` | P2 | Manual plan only; not automated because it needs multiple reachable IdP/JWKS origins | `/tmp/orb-auth-jwks-xregion-<run_id>` |
 | JWKS rotation and token expiry | Agent-executable manual | `AUTH-MANUAL-JWKS-01` | P2 | Manual plan only; not automated because it needs Kanidm key rotation and long token lifetime waits | `/tmp/orb-auth-jwks-<run_id>` |
@@ -110,7 +110,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 
 **Expected**:
 - HTTP 401
-- `Www-Authenticate: Bearer realm="http://localhost:5050/v2/token",service="orb-chrysa"`
+- `Www-Authenticate: Bearer realm="http://localhost:5050/v2/token",service="layerhouse"`
 - JSON body with `errors[0].code = "UNAUTHORIZED"`
 
 ### AUTH3. PAT Creation And Listing
@@ -129,7 +129,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 **Expected**:
 - POST returns 201 with `token` field (full token visible once)
 - GET returns PAT list with `prefix`, `name`, `scopes`, `created_at` — no `token` field
-- PAT `prefix` starts with `orbchrysa-`
+- PAT `prefix` starts with `layerhouse-`
 
 ### AUTH4. Docker Login With PAT
 
@@ -194,7 +194,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 **Expected**:
 - `/oauth2/start` redirects to kanidm (HTTP 302)
 - After login, redirected to dashboard root `/`
-- `orb_chrysa_session` cookie is set (HttpOnly, SameSite=Lax)
+- `layerhouse_session` cookie is set (HttpOnly, SameSite=Lax)
 - Dashboard APIs become accessible with session cookie
 
 ### AUTH9. Kanidm Service Account Token
@@ -208,7 +208,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 
 **Expected**:
 - Service account token works for `docker login`
-- Token is a valid kanidm JWS that orb-chrysa validates via JWKS
+- Token is a valid kanidm JWS that layerhouse validates via JWKS
 
 ### AUTH10. Token Reuse Across Requests
 
@@ -298,7 +298,7 @@ Do not delete `qa/oci-*` repositories created by the OCI workflow test plan.
 
 ### AUTH16. Kanidm OAuth2 redirect_uri / Landing Mapping
 
-Regression guard for the live-login `redirect_uri` mismatch: Orb Chrysa sends
+Regression guard for the live-login `redirect_uri` mismatch: Layerhouse sends
 `redirect_uri = http://localhost:5050/oauth2/callback` during the authorization-code
 exchange, which Kanidm validates against the client's `oauth2_rs_origin` (the allowed
 redirect set). `oauth2_rs_origin_landing` is only the app-portal landing page. These two
@@ -310,7 +310,7 @@ must not be swapped.
 **Steps**:
 1. Inspect the `kanidm-setup` container logs — the `=== Verifying OAuth2 redirect/landing
    mapping ===` step must print the stored attributes and not abort the script.
-2. Independently query the client: `GET $KANIDM_URL/v1/oauth2/orb-chrysa` (with admin
+2. Independently query the client: `GET $KANIDM_URL/v1/oauth2/layerhouse` (with admin
    bearer) and read `attrs.oauth2_rs_origin` and `attrs.oauth2_rs_origin_landing`.
 
 **Expected**:
@@ -402,8 +402,8 @@ just compose-auth-down
 
 #### Preconditions And Environment
 
-- Auth-enabled Orb Chrysa deployment is running with Kanidm.
-- Browser can reach both Orb Chrysa and Kanidm public origins.
+- Auth-enabled Layerhouse deployment is running with Kanidm.
+- Browser can reach both Layerhouse and Kanidm public origins.
 - Test user is a member of the configured registry admin group.
 - Browser automation can preserve screenshots and network logs.
 
@@ -434,11 +434,11 @@ chmod 0700 "$WORK"
 3. Expect a redirect to the Kanidm login page under `$KANIDM_URL`.
 4. Log in with `$USERNAME` and the password from `$PASSWORD_FILE`.
 5. Approve the Kanidm consent screen, then expect to land on
-   `$ORB_URL/oauth2/callback` and for Orb Chrysa to exchange the authorization code
+   `$ORB_URL/oauth2/callback` and for Layerhouse to exchange the authorization code
    successfully (no `redirect_uri`/`invalid_grant` error) before redirecting to the
    dashboard.
 6. In browser devtools or automation output, verify:
-   - `orb_chrysa_session` cookie exists.
+   - `layerhouse_session` cookie exists.
    - cookie is `HttpOnly`.
    - cookie has `SameSite=Lax`.
    - dashboard API calls include the cookie and return 200.
@@ -461,7 +461,7 @@ chmod 0700 "$WORK"
 - After consent, the browser lands on `$ORB_URL/oauth2/callback` and the authorization-code
   exchange succeeds — confirming the sent `redirect_uri` matches the client's
   `oauth2_rs_origin` (see AUTH16).
-- Successful login redirects back to Orb Chrysa, not to a stale or internal
+- Successful login redirects back to Layerhouse, not to a stale or internal
   cluster URL.
 - `GET /api/v1/session` returns `auth_enabled: true` with a populated `subject`/`username`
   for the expected admin or developer user and the expected `groups`/`scopes`.
@@ -472,7 +472,7 @@ chmod 0700 "$WORK"
 #### Evidence
 
 - Screenshot of Kanidm login page.
-- Screenshot of authenticated Orb Chrysa dashboard.
+- Screenshot of authenticated Layerhouse dashboard.
 - Network log or HAR showing redirect chain.
 - Cookie metadata screenshot or browser automation dump.
 - Cluster status JSON before and after login.
@@ -503,7 +503,7 @@ Run this only when Kanidm exposes an operator-approved key rotation flow for the
 test deployment. Record the pre-rotation JWKS, create a token before rotation,
 rotate keys, verify new tokens work, verify old tokens remain valid until their
 configured lifetime or fail according to the configured rotation policy, then
-record the post-rotation JWKS and Orb Chrysa auth logs.
+record the post-rotation JWKS and Layerhouse auth logs.
 
 ### AUTH-MANUAL-JWKS-RESUME-01: Restart From Last-Good JWKS While IdP Is Down
 
@@ -514,13 +514,13 @@ record the post-rotation JWKS and Orb Chrysa auth logs.
 
 - Tilt cluster is running with auth enabled and at least one successful JWKS fetch.
 - RustFS is healthy; Kanidm can be intentionally stopped and restarted.
-- The Orb Chrysa config uses `jwks_cache_s3_key = "auth/jwks/last-good.json"` and
+- The Layerhouse config uses `jwks_cache_s3_key = "auth/jwks/last-good.json"` and
   `jwks_max_stale_seconds = 86400`.
 
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-auth-jwks-resume-$RUN_ID"
-export ORB_NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+export ORB_NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 export KANIDM_NAMESPACE="${KANIDM_NAMESPACE:-kanidm}"
 export REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 umask 077
@@ -549,20 +549,20 @@ chmod 0700 "$WORK"
    kubectl -n "$KANIDM_NAMESPACE" rollout status deployment/kanidm --timeout=120s || true
    ```
 
-4. Restart Orb Chrysa pods while Kanidm is unavailable:
+4. Restart Layerhouse pods while Kanidm is unavailable:
 
    ```bash
-   kubectl -n "$ORB_NAMESPACE" rollout restart statefulset/orb-chrysa
-   kubectl -n "$ORB_NAMESPACE" rollout status statefulset/orb-chrysa --timeout=420s \
+   kubectl -n "$ORB_NAMESPACE" rollout restart statefulset/layerhouse
+   kubectl -n "$ORB_NAMESPACE" rollout status statefulset/layerhouse --timeout=420s \
      | tee "$WORK/orb-rollout.txt"
    ```
 
-5. Verify Orb Chrysa starts from S3 cached JWKS and remains ready:
+5. Verify Layerhouse starts from S3 cached JWKS and remains ready:
 
    ```bash
    curl -sk "https://$REGISTRY_ENDPOINT/readyz" | tee "$WORK/readyz-during-idp-outage.txt"
    curl -sk "https://$REGISTRY_ENDPOINT/metrics" | tee "$WORK/metrics-during-idp-outage.txt"
-   kubectl -n "$ORB_NAMESPACE" logs statefulset/orb-chrysa --all-containers=true \
+   kubectl -n "$ORB_NAMESPACE" logs statefulset/layerhouse --all-containers=true \
      > "$WORK/orb-logs-during-idp-outage.txt"
    ```
 
@@ -577,19 +577,19 @@ chmod 0700 "$WORK"
 
 #### Expected Checks
 
-- Orb Chrysa rollout succeeds while Kanidm is down.
+- Layerhouse rollout succeeds while Kanidm is down.
 - `/readyz` remains successful because S3 and Raft are healthy.
 - Logs contain `using stale last-good JWKS cache`.
-- Metrics during outage include `orb_chrysa_auth_jwks_stale_cache 1`.
-- Metrics after Kanidm restore return to `orb_chrysa_auth_jwks_stale_cache 0`.
-- `orb_chrysa_auth_jwks_refresh_failures_total` increments during outage.
+- Metrics during outage include `layerhouse_auth_jwks_stale_cache 1`.
+- Metrics after Kanidm restore return to `layerhouse_auth_jwks_stale_cache 0`.
+- `layerhouse_auth_jwks_refresh_failures_total` increments during outage.
 
 #### Cleanup And Rollback
 
 ```bash
 kubectl -n "$KANIDM_NAMESPACE" scale deployment/kanidm --replicas=1
 kubectl -n "$KANIDM_NAMESPACE" rollout status deployment/kanidm --timeout=240s
-kubectl -n "$ORB_NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
+kubectl -n "$ORB_NAMESPACE" rollout status statefulset/layerhouse --timeout=240s
 ```
 
 #### Known Hazards
@@ -614,7 +614,7 @@ kubectl -n "$ORB_NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-auth-jwks-xregion-$RUN_ID"
-export ORB_NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+export ORB_NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 export REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 umask 077
 mkdir -p "$WORK"
@@ -626,7 +626,7 @@ chmod 0700 "$WORK"
 1. Render and save Helm values showing ordered endpoints:
 
    ```bash
-   helm get values orb-chrysa -n "$ORB_NAMESPACE" -o yaml \
+   helm get values layerhouse -n "$ORB_NAMESPACE" -o yaml \
      | tee "$WORK/helm-values.yaml"
    ```
 
@@ -656,9 +656,9 @@ chmod 0700 "$WORK"
 
 #### Expected Checks
 
-- Orb Chrysa does not restart or become unready when the first endpoint is down.
-- `orb_chrysa_auth_jwks_refresh_failures_total` increments.
-- `orb_chrysa_auth_jwks_endpoint_info{endpoint="..."}` changes to a secondary
+- Layerhouse does not restart or become unready when the first endpoint is down.
+- `layerhouse_auth_jwks_refresh_failures_total` increments.
+- `layerhouse_auth_jwks_endpoint_info{endpoint="..."}` changes to a secondary
   endpoint during failover.
 - Tokens whose `iss` matches the public `issuer_url` remain valid.
 

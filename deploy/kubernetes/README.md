@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-orb-chrysa runs as a StatefulSet with automatic Raft membership management.
+layerhouse runs as a StatefulSet with automatic Raft membership management.
 
 ## Architecture
 
@@ -20,19 +20,19 @@ orb-chrysa runs as a StatefulSet with automatic Raft membership management.
 └─────────────────────────────────────────────┘
 ```
 
-- **StatefulSet** provides stable hostnames (`orb-chrysa-0`, `orb-chrysa-1`, ...)
-- **DNS discovery** (`discovery_dns = "orb-chrysa"`) enables automatic peer discovery
+- **StatefulSet** provides stable hostnames (`layerhouse-0`, `layerhouse-1`, ...)
+- **DNS discovery** (`discovery_dns = "layerhouse"`) enables automatic peer discovery
 - **Kubernetes reconciler** adjusts Raft membership when replicas change
 - **No PVC** — Raft log uses ephemeral redb; state recovers from S3 snapshots
 
 ## Install
 
 ```bash
-helm install orb-chrysa ./deploy/kubernetes/helm \
-  --namespace orb-chrysa \
+helm install layerhouse ./deploy/kubernetes/helm \
+  --namespace layerhouse \
   --create-namespace \
   --set storage.s3.endpoint=https://s3.example.internal \
-  --set storage.s3.bucket=orb-chrysa \
+  --set storage.s3.bucket=layerhouse \
   --set storage.s3.region=us-east-1
 ```
 

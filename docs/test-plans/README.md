@@ -1,4 +1,4 @@
-# orb-chrysa Test Plans
+# layerhouse Test Plans
 
 **Date**: 2026-05-31
 **Type**: Test Plan Index
@@ -63,7 +63,7 @@ backlog so it is not a hidden production gap.
 | Tilt StatefulSet scale `3 -> 1 -> 3 -> 2 -> 1` with data preserved and no dead voters | Automated | `just tilt-scale-smoke` | P0 | Implemented, opt-in local smoke | `target/tilt/evidence/<run_id>-scale` |
 | Tilt failure scenarios: node trust removal, missing imagePullSecret, one-pod loss, two-pod quorum loss | Automated | `just tilt-failure-smoke` | P1 | Implemented, opt-in destructive local smoke | `target/tilt/evidence/<run_id>-failure` |
 | Tilt recovery scenarios: pod restart, StatefulSet restart, snapshot restore log evidence, membership rejoin | Automated | `just tilt-recovery-smoke` | P1 | Implemented, opt-in local smoke | `target/tilt/evidence/<run_id>-recovery` |
-| JWKS last-good cache trust window | Automated | `cargo test -p orb-chrysa-server auth::` | P1 | Implemented at unit level; live IdP outage remains manual | command log |
+| JWKS last-good cache trust window | Automated | `cargo test -p layerhouse-server auth::` | P1 | Implemented at unit level; live IdP outage remains manual | command log |
 | Release packaging dry run | Automated | `just release-dry-run` | P0 | Implemented, opt-in because it runs `just check` | `target/release-dry-run/<version>` |
 | OCI Distribution conformance | Automated | `just conformance` | P1 | Implemented, opt-in external conformance runner | `tests/conformance/results` |
 | CLI-generated air-gapped Kubernetes install | Agent-executable manual | `K8S-MANUAL-AIRGAP-01` | P0 | Full operator plan remains manual; `tests/k8s/helm-smoke.sh` covers the scripted harness when node trust injection is supplied | `/tmp/orb-airgap-<run_id>` |
@@ -155,7 +155,7 @@ The runner preserves each child workflow's disposable cleanup behavior and
 evidence directory. Override `REGISTRY`, `SCHEME`, `NODE_PORTS`, `RUN_ID`, or
 `EVIDENCE_ROOT` when testing a non-default environment.
 For redirect-mode coverage, start the cluster with
-`ORB_CHRYSA_CONFIG="$PWD/tests/compose/config/cluster-redirect.toml"` and set
+`LAYERHOUSE_CONFIG="$PWD/tests/compose/config/cluster-redirect.toml"` and set
 `EXPECT_BLOB_REDIRECT=1` for `tests/production/oci-workflow.sh`.
 
 This runner is intentionally an opt-in local or self-hosted pre-release gate,

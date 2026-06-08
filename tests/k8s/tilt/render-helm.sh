@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
-S3_NAMESPACE="${RUSTFS_NAMESPACE:-orb-chrysa-tilt-s3}"
-RELEASE="${RELEASE:-orb-chrysa}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
+S3_NAMESPACE="${RUSTFS_NAMESPACE:-layerhouse-tilt-s3}"
+RELEASE="${RELEASE:-layerhouse}"
 CHART="${CHART:-deploy/kubernetes/helm}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
-S3_BUCKET="${S3_BUCKET:-orb-chrysa}"
+S3_BUCKET="${S3_BUCKET:-layerhouse}"
 S3_ACCESS_KEY="${S3_ACCESS_KEY:-rustfsadmin}"
 S3_SECRET_KEY="${S3_SECRET_KEY:-rustfsadmin}"
 WORK="${WORK:-target/tilt/helm}"
@@ -18,7 +18,7 @@ cat > "$VALUES" <<YAML
 replicaCount: 3
 
 image:
-  repository: orb-chrysa-server
+  repository: layerhouse-server
   tag: tilt
   pullPolicy: IfNotPresent
 
@@ -32,29 +32,29 @@ storage:
     bucket: $S3_BUCKET
     region: us-east-1
     pathStyle: true
-    existingSecret: orb-chrysa-s3
+    existingSecret: layerhouse-s3
 
 server:
   tls:
-    existingSecret: orb-chrysa-server-tls
+    existingSecret: layerhouse-server-tls
     dnsNames:
       - localhost
 
 raft:
   tls:
-    existingSecret: orb-chrysa-raft-mtls
+    existingSecret: layerhouse-raft-mtls
 
 auth:
   enabled: true
-  issuerUrl: https://localhost:$KANIDM_HOST_PORT/oauth2/openid/orb-chrysa
-  issuerInternalUrl: https://kanidm.kanidm.svc.cluster.local:8443/oauth2/openid/orb-chrysa
+  issuerUrl: https://localhost:$KANIDM_HOST_PORT/oauth2/openid/layerhouse
+  issuerInternalUrl: https://kanidm.kanidm.svc.cluster.local:8443/oauth2/openid/layerhouse
   issuerInternalUrls:
-    - https://kanidm.kanidm.svc.cluster.local:8443/oauth2/openid/orb-chrysa
-  clientId: orb-chrysa
+    - https://kanidm.kanidm.svc.cluster.local:8443/oauth2/openid/layerhouse
+  clientId: layerhouse
   tokenEndpointUrl: https://$REGISTRY_ENDPOINT/v2/token
   redirectUri: https://$REGISTRY_ENDPOINT/oauth2/callback
   tlsInsecureSkipVerify: true
-  existingSecret: orb-chrysa-auth
+  existingSecret: layerhouse-auth
   permissions:
     - name: admin-full-access
       groups: ["registry_admins"]
@@ -66,7 +66,7 @@ auth:
 certManager:
   enabled: true
   issuerRef:
-    name: orb-chrysa-ca
+    name: layerhouse-ca
     kind: ClusterIssuer
     group: cert-manager.io
 YAML
@@ -80,7 +80,7 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: orb-chrysa-s3
+  name: layerhouse-s3
   namespace: $NAMESPACE
 type: Opaque
 stringData:

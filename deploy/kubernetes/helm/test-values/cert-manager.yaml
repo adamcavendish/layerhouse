@@ -1,12 +1,12 @@
 storage:
   s3:
     endpoint: http://s3.example.internal:9000
-    bucket: orb-chrysa
+    bucket: layerhouse
 
 certManager:
   enabled: true
   issuerRef:
-    name: orb-chrysa-ca
+    name: layerhouse-ca
     kind: ClusterIssuer
     group: cert-manager.io
 
@@ -14,4 +14,4 @@ server:
   tls:
     dnsNames:
       - registry.example.internal
-      - orb-chrysa-nodeport.example.internal
+      - layerhouse-nodeport.example.internal

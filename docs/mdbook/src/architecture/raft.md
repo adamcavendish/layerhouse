@@ -1,6 +1,6 @@
 # Raft Clustering
 
-orb-chrysa uses [OpenRaft](https://github.com/datafuselabs/openraft) (v0.9) for
+layerhouse uses [OpenRaft](https://github.com/datafuselabs/openraft) (v0.9) for
 distributed consensus over metadata.
 
 ## Raft Integration
@@ -27,7 +27,7 @@ The Raft integration lives in the `raft/` module:
 [raft]
 listen = "0.0.0.0:5051"
 data_dir = "/tmp/raft"
-discovery_dns = "orb-chrysa"
+discovery_dns = "layerhouse"
 ```
 
 Raft uses a separate listener from the public registry/API listener. Production

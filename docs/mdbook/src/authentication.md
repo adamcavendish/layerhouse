@@ -1,6 +1,6 @@
 # Authentication
 
-orb-chrysa supports authentication via any standard OIDC identity provider
+layerhouse supports authentication via any standard OIDC identity provider
 ([kanidm](https://kanidm.com) is the recommended and best-tested option).
 When the `[auth]` section is present in the config, all OCI and
 dashboard API endpoints require authentication.
@@ -22,15 +22,15 @@ graph LR
     Auth --> JWKS
 ```
 
-The IdP issues JWTs; orb-chrysa validates them locally via a cached JWKS endpoint.
+The IdP issues JWTs; layerhouse validates them locally via a cached JWKS endpoint.
 No per-request calls to the IdP.
 
 ## Token Types
 
 | Type | Issuer | Use case |
 |------|--------|----------|
-| **Personal Access Token** (PAT) | orb-chrysa | `docker login` for human users |
-| **OCI Bearer Token** | orb-chrysa | Short-lived token from `/v2/token` |
+| **Personal Access Token** (PAT) | layerhouse | `docker login` for human users |
+| **OCI Bearer Token** | layerhouse | Short-lived token from `/v2/token` |
 | **OIDC Access Token** | IdP | CI pipeline service accounts |
 
 ## Topics

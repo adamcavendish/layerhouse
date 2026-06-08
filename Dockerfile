@@ -20,7 +20,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY docs/assets/brand docs/assets/brand
 COPY crates/ crates/
 
-WORKDIR /app/crates/orb-chrysa-server/dashboard
+WORKDIR /app/crates/layerhouse-server/dashboard
 RUN vp install \
     && vp build
 
@@ -28,8 +28,8 @@ WORKDIR /app
 RUN --mount=type=cache,target=/app/target \
     --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    cargo build --release -p orb-chrysa-server \
-    && cp /app/target/release/orb-chrysa-server /tmp/orb-chrysa-server
+    cargo build --release -p layerhouse-server \
+    && cp /app/target/release/layerhouse-server /tmp/layerhouse-server
 
 FROM debian:trixie-slim
 
@@ -37,6 +37,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /tmp/orb-chrysa-server /usr/local/bin/orb-chrysa-server
+COPY --from=builder /tmp/layerhouse-server /usr/local/bin/layerhouse-server
 
-ENTRYPOINT ["orb-chrysa-server"]
+ENTRYPOINT ["layerhouse-server"]

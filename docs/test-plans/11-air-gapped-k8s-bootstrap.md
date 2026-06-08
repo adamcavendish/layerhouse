@@ -14,7 +14,7 @@ instructions.
 | Server parses `[server.tls]` and serves the public registry listener over HTTPS | P0 |
 | Server parses `[raft.tls]` with `server_ca_path` and `client_ca_path` and rejects missing peer client certs | P0 |
 | Dashboard Setup page renders copyable Kubernetes/containerd snippets | P1 |
-| Kubernetes node can pull from an internally trusted Orb Chrysa endpoint | P2 |
+| Kubernetes node can pull from an internally trusted Layerhouse endpoint | P2 |
 
 ## Coverage Status
 
@@ -78,15 +78,15 @@ Expected:
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-airgap-$RUN_ID"
-export NAMESPACE="orb-chrysa"
+export NAMESPACE="layerhouse"
 export REGISTRY_HOST="registry.internal.example.com"
 export REGISTRY_ENDPOINT="$REGISTRY_HOST:32000"
 export S3_ENDPOINT="https://s3.internal.example.com"
-export S3_BUCKET="orb-chrysa"
+export S3_BUCKET="layerhouse"
 export S3_REGION="us-east-1"
 export S3_ACCESS_KEY="replace-me"
 export S3_SECRET_KEY="replace-me"
-export IMAGE_TAG="replace-with-mirrored-orb-chrysa-server-tag"
+export IMAGE_TAG="replace-with-mirrored-layerhouse-server-tag"
 umask 077
 mkdir -p "$WORK"
 chmod 0700 "$WORK"
@@ -97,11 +97,11 @@ chmod 0700 "$WORK"
 1. Generate certs:
 
    ```bash
-   orb-chrysa-cli air-gapped cert init \
+   layerhouse-ctl air-gapped cert init \
      --registry-host "$REGISTRY_HOST" \
      --namespace "$NAMESPACE" \
-     --statefulset-name orb-chrysa \
-     --headless-service orb-chrysa-headless \
+     --statefulset-name layerhouse \
+     --headless-service layerhouse-headless \
      --replicas 3 \
      --out "$WORK"
    ```
@@ -109,13 +109,13 @@ chmod 0700 "$WORK"
 2. Generate bundle:
 
    ```bash
-   orb-chrysa-cli air-gapped k8s bundle-generate \
+   layerhouse-ctl air-gapped k8s bundle-generate \
      --registry-endpoint "$REGISTRY_ENDPOINT" \
      --cert-dir "$WORK/certs" \
      --namespace "$NAMESPACE" \
-     --server-tls-secret orb-chrysa-server-tls \
-     --raft-tls-secret orb-chrysa-raft-mtls \
-     --image-repository "$REGISTRY_ENDPOINT/orb-chrysa-server" \
+     --server-tls-secret layerhouse-server-tls \
+     --raft-tls-secret layerhouse-raft-mtls \
+     --image-repository "$REGISTRY_ENDPOINT/layerhouse-server" \
      --image-tag "$IMAGE_TAG" \
      --out "$WORK"
    ```
@@ -124,7 +124,7 @@ chmod 0700 "$WORK"
 
    ```bash
    kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-   kubectl -n "$NAMESPACE" create secret generic orb-chrysa-s3 \
+   kubectl -n "$NAMESPACE" create secret generic layerhouse-s3 \
      --from-literal=access_key="$S3_ACCESS_KEY" \
      --from-literal=secret_key="$S3_SECRET_KEY" \
      --dry-run=client -o yaml | tee "$WORK/s3-secret.yaml" | kubectl apply -f -
@@ -136,20 +136,20 @@ chmod 0700 "$WORK"
 4. Install the Helm chart with generated values and external S3 overrides:
 
    ```bash
-   helm upgrade --install orb-chrysa ./deploy/kubernetes/helm \
+   helm upgrade --install layerhouse ./deploy/kubernetes/helm \
      --namespace "$NAMESPACE" \
      --create-namespace \
      -f "$WORK/helm/values-air-gapped.yaml" \
      --set storage.s3.endpoint="$S3_ENDPOINT" \
      --set storage.s3.bucket="$S3_BUCKET" \
      --set storage.s3.region="$S3_REGION" \
-     --set storage.s3.existingSecret=orb-chrysa-s3
+     --set storage.s3.existingSecret=layerhouse-s3
    ```
 
 5. Confirm readiness:
 
    ```bash
-   kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+   kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
    curl --cacert "$WORK/certs/ca.crt" \
      "https://$REGISTRY_ENDPOINT/readyz" | tee "$WORK/readyz.txt"
    ```
@@ -179,13 +179,13 @@ chmod 0700 "$WORK"
 11. Verify Kubernetes pull:
 
    ```bash
-   kubectl -n "$NAMESPACE" run "orb-chrysa-pull-test-$RUN_ID" \
+   kubectl -n "$NAMESPACE" run "layerhouse-pull-test-$RUN_ID" \
      --image="$REGISTRY_ENDPOINT/qa/airgap:$RUN_ID" \
      --restart=Never
 
    kubectl -n "$NAMESPACE" wait --for=condition=Ready \
-     "pod/orb-chrysa-pull-test-$RUN_ID" --timeout=3m
-   kubectl -n "$NAMESPACE" describe pod "orb-chrysa-pull-test-$RUN_ID" \
+     "pod/layerhouse-pull-test-$RUN_ID" --timeout=3m
+   kubectl -n "$NAMESPACE" describe pod "layerhouse-pull-test-$RUN_ID" \
      > "$WORK/pull-test-pod.txt"
    ```
 
@@ -223,9 +223,9 @@ Expected:
 ### Cleanup And Rollback
 
 ```bash
-helm -n "$NAMESPACE" uninstall orb-chrysa || true
-kubectl -n "$NAMESPACE" delete pod "orb-chrysa-pull-test-$RUN_ID" --ignore-not-found
-kubectl -n "$NAMESPACE" delete secret orb-chrysa-s3 orb-chrysa-server-tls orb-chrysa-raft-mtls --ignore-not-found
+helm -n "$NAMESPACE" uninstall layerhouse || true
+kubectl -n "$NAMESPACE" delete pod "layerhouse-pull-test-$RUN_ID" --ignore-not-found
+kubectl -n "$NAMESPACE" delete secret layerhouse-s3 layerhouse-server-tls layerhouse-raft-mtls --ignore-not-found
 ```
 
 Remove containerd trust files only from test nodes where they were installed:
@@ -250,13 +250,13 @@ sudo systemctl restart containerd
 ### Preconditions And Environment
 
 - Helm install uses `certManager.enabled=true`.
-- cert-manager is installed and the issuer used by Orb Chrysa is Ready.
+- cert-manager is installed and the issuer used by Layerhouse is Ready.
 - The test cluster can tolerate pod restarts if projected Secrets need reload.
 
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-certrot-$RUN_ID"
-export NAMESPACE="orb-chrysa"
+export NAMESPACE="layerhouse"
 export REGISTRY_ENDPOINT="registry.internal.example.com:32000"
 umask 077
 mkdir -p "$WORK"
@@ -267,21 +267,21 @@ chmod 0700 "$WORK"
 
 ```bash
 kubectl -n "$NAMESPACE" get certificate,secret > "$WORK/certs-before.txt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORK/ca-before.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/server-before.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-raft-mtls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/raft-before.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORK/ca-before.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/server-before.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-raft-mtls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/raft-before.crt"
 
-cmctl renew -n "$NAMESPACE" orb-chrysa-server
-cmctl renew -n "$NAMESPACE" orb-chrysa-raft
-kubectl -n "$NAMESPACE" wait --for=condition=Ready certificate/orb-chrysa-server --timeout=3m
-kubectl -n "$NAMESPACE" wait --for=condition=Ready certificate/orb-chrysa-raft --timeout=3m
+cmctl renew -n "$NAMESPACE" layerhouse-server
+cmctl renew -n "$NAMESPACE" layerhouse-raft
+kubectl -n "$NAMESPACE" wait --for=condition=Ready certificate/layerhouse-server --timeout=3m
+kubectl -n "$NAMESPACE" wait --for=condition=Ready certificate/layerhouse-raft --timeout=3m
 
-kubectl -n "$NAMESPACE" rollout restart statefulset/orb-chrysa
-kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+kubectl -n "$NAMESPACE" rollout restart statefulset/layerhouse
+kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
 
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORK/ca-after.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/server-after.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-raft-mtls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/raft-after.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORK/ca-after.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/server-after.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-raft-mtls -o jsonpath='{.data.tls\.crt}' | base64 -d > "$WORK/raft-after.crt"
 
 curl --cacert "$WORK/ca-after.crt" "https://$REGISTRY_ENDPOINT/readyz" | tee "$WORK/readyz-after.txt"
 curl --cacert "$WORK/ca-after.crt" "https://$REGISTRY_ENDPOINT/api/v1/admin/cluster/status" \
@@ -311,9 +311,9 @@ If rotation breaks the registry, restore the previous known-good Helm values or
 issuer, then force a new certificate and restart:
 
 ```bash
-helm -n "$NAMESPACE" rollback orb-chrysa
-kubectl -n "$NAMESPACE" rollout restart statefulset/orb-chrysa
-kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+helm -n "$NAMESPACE" rollback layerhouse
+kubectl -n "$NAMESPACE" rollout restart statefulset/layerhouse
+kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
 ```
 
 ### Known Hazards
@@ -332,14 +332,14 @@ kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
 
 - External S3-compatible bucket exists and is dedicated to this test.
 - Bucket credentials allow object put/get/list/delete.
-- The endpoint is reachable from every Orb Chrysa pod.
+- The endpoint is reachable from every Layerhouse pod.
 
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-exts3-$RUN_ID"
-export NAMESPACE="orb-chrysa"
+export NAMESPACE="layerhouse"
 export S3_ENDPOINT="https://s3.example.internal"
-export S3_BUCKET="orb-chrysa-$RUN_ID"
+export S3_BUCKET="layerhouse-$RUN_ID"
 export S3_REGION="us-east-1"
 export S3_ACCESS_KEY="replace-me"
 export S3_SECRET_KEY="replace-me"
@@ -352,21 +352,21 @@ chmod 0700 "$WORK"
 
 ```bash
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n "$NAMESPACE" create secret generic orb-chrysa-s3 \
+kubectl -n "$NAMESPACE" create secret generic layerhouse-s3 \
   --from-literal=access_key="$S3_ACCESS_KEY" \
   --from-literal=secret_key="$S3_SECRET_KEY" \
   --dry-run=client -o yaml | tee "$WORK/s3-secret.yaml" | kubectl apply -f -
 
-helm upgrade --install orb-chrysa ./deploy/kubernetes/helm \
+helm upgrade --install layerhouse ./deploy/kubernetes/helm \
   --namespace "$NAMESPACE" \
   --create-namespace \
   -f deploy/kubernetes/helm/test-values/cert-manager.yaml \
   --set storage.s3.endpoint="$S3_ENDPOINT" \
   --set storage.s3.bucket="$S3_BUCKET" \
   --set storage.s3.region="$S3_REGION" \
-  --set storage.s3.existingSecret=orb-chrysa-s3
+  --set storage.s3.existingSecret=layerhouse-s3
 
-kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
 kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/pods.txt"
 ```
 
@@ -381,7 +381,7 @@ aws --endpoint-url "$S3_ENDPOINT" s3 ls "s3://$S3_BUCKET/raft-snapshots/" --recu
 ### Expected Checks
 
 - Pods become Ready without bundled RustFS.
-- OCI push/pull succeeds against Orb Chrysa.
+- OCI push/pull succeeds against Layerhouse.
 - External S3 contains `blobs/` objects after push.
 - S3 snapshot objects appear after graceful pod restart or snapshot policy.
 
@@ -395,8 +395,8 @@ aws --endpoint-url "$S3_ENDPOINT" s3 ls "s3://$S3_BUCKET/raft-snapshots/" --recu
 ### Cleanup And Rollback
 
 ```bash
-helm -n "$NAMESPACE" uninstall orb-chrysa || true
-kubectl -n "$NAMESPACE" delete secret orb-chrysa-s3 --ignore-not-found
+helm -n "$NAMESPACE" uninstall layerhouse || true
+kubectl -n "$NAMESPACE" delete secret layerhouse-s3 --ignore-not-found
 aws --endpoint-url "$S3_ENDPOINT" s3 rm "s3://$S3_BUCKET/" --recursive
 ```
 
@@ -413,7 +413,7 @@ aws --endpoint-url "$S3_ENDPOINT" s3 rm "s3://$S3_BUCKET/" --recursive
 
 ### Preconditions And Environment
 
-- A test node already trusts the Orb Chrysa registry CA and can pull a
+- A test node already trusts the Layerhouse registry CA and can pull a
   disposable image.
 - You have approval to edit that node's containerd trust directory.
 - A disposable image exists at `$REGISTRY_ENDPOINT/qa/nodetrust:$RUN_ID`.
@@ -445,9 +445,9 @@ set -e
 test "$STATUS" -ne 0
 
 ssh "$NODE" "sudo mkdir -p '/etc/containerd/certs.d/$REGISTRY_ENDPOINT'"
-scp "$TRUST_SOURCE_DIR/ca.crt" "$NODE:/tmp/orb-chrysa-ca.crt"
-scp "$TRUST_SOURCE_DIR/hosts.toml" "$NODE:/tmp/orb-chrysa-hosts.toml"
-ssh "$NODE" "sudo mv /tmp/orb-chrysa-ca.crt '/etc/containerd/certs.d/$REGISTRY_ENDPOINT/ca.crt' && sudo mv /tmp/orb-chrysa-hosts.toml '/etc/containerd/certs.d/$REGISTRY_ENDPOINT/hosts.toml' && sudo systemctl restart containerd"
+scp "$TRUST_SOURCE_DIR/ca.crt" "$NODE:/tmp/layerhouse-ca.crt"
+scp "$TRUST_SOURCE_DIR/hosts.toml" "$NODE:/tmp/layerhouse-hosts.toml"
+ssh "$NODE" "sudo mv /tmp/layerhouse-ca.crt '/etc/containerd/certs.d/$REGISTRY_ENDPOINT/ca.crt' && sudo mv /tmp/layerhouse-hosts.toml '/etc/containerd/certs.d/$REGISTRY_ENDPOINT/hosts.toml' && sudo systemctl restart containerd"
 ssh "$NODE" "sudo crictl pull '$IMAGE'" | tee "$WORK/pull-after-restore.txt"
 ```
 

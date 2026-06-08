@@ -1,15 +1,15 @@
 [book]
-authors = ["orb-chrysa contributors"]
+authors = ["layerhouse contributors"]
 language = "en"
 src = "src"
-title = "orb-chrysa Documentation"
+title = "layerhouse Documentation"
 
 [build]
 create-missing = true
 
 [output.html]
-edit-url-template = "https://github.com/adamcavendish/orb-chrysa/edit/master/docs/mdbook/{path}"
-git-repository-url = "https://github.com/adamcavendish/orb-chrysa"
+edit-url-template = "https://github.com/adamcavendish/layerhouse/edit/master/docs/mdbook/{path}"
+git-repository-url = "https://github.com/adamcavendish/layerhouse"
 
 [preprocessor.mermaid]
 command = "mdbook-mermaid"

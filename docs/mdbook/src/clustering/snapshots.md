@@ -23,7 +23,7 @@ On pod restart, the ephemeral redb log is lost. Recovery proceeds as follows:
 ## Snapshot Version
 
 The snapshot format has a version header (`SNAPSHOT_FORMAT_VERSION = 4`). Snapshots
-with an older version are rejected. Since Orb Chrysa is not yet deployed to
+with an older version are rejected. Since Layerhouse is not yet deployed to
 production, breaking snapshot format changes are acceptable.
 
 ## Kubernetes Considerations

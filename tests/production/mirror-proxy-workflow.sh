@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Production-style mirror/proxy cache workflow smoke test for a running
-# orb-chrysa registry.
+# layerhouse registry.
 #
-# Requires a live orb-chrysa compose cluster, Docker daemon, ORAS, curl, and jq.
+# Requires a live layerhouse compose cluster, Docker daemon, ORAS, curl, and jq.
 # Defaults target the local compose cluster at localhost:5050 and a disposable
 # upstream registry container attached to the compose network.
 set -euo pipefail
 
 REGISTRY="${REGISTRY:-localhost:5050}"
 SCHEME="${SCHEME:-http}"
-COMPOSE_NETWORK="${COMPOSE_NETWORK:-orb-chrysa_default}"
+COMPOSE_NETWORK="${COMPOSE_NETWORK:-layerhouse_default}"
 UPSTREAM_IMAGE="${UPSTREAM_IMAGE:-registry:2}"
 RUN_ID="${RUN_ID:-$(date +%s)}"
 EVIDENCE_ROOT="${EVIDENCE_ROOT:-/tmp}"
@@ -17,10 +17,10 @@ WORK="${WORK:-$EVIDENCE_ROOT/orb-mirror-proxy-$RUN_ID}"
 POLL_TIMEOUT_SECS="${POLL_TIMEOUT_SECS:-180}"
 POLL_INTERVAL_SECS="${POLL_INTERVAL_SECS:-3}"
 
-UPSTREAM_NAME="${UPSTREAM_NAME:-orb-chrysa-upstream-$RUN_ID}"
+UPSTREAM_NAME="${UPSTREAM_NAME:-layerhouse-upstream-$RUN_ID}"
 UPSTREAM_HOST_REGISTRY=""
 UPSTREAM_ORB_REGISTRY="$UPSTREAM_NAME:5000"
-ORB_CONTAINER="${ORB_CONTAINER:-orb-chrysa-orb-chrysa-0-1}"
+ORB_CONTAINER="${ORB_CONTAINER:-layerhouse-layerhouse-0-1}"
 
 MIRROR_RULE="qa-mirror-$RUN_ID"
 MIRROR_REPO="qa/mirror-$RUN_ID"
@@ -224,7 +224,7 @@ push_oras_file() {
     (
         cd "$(dirname "$file")"
         oras push --plain-http --no-tty --format json \
-            --artifact-type application/vnd.orb-chrysa.qa.v1 \
+            --artifact-type application/vnd.layerhouse.qa.v1 \
             "$registry/$repo:$tag" \
             "$(basename "$file"):$media_type"
     ) | tee "$output"
@@ -314,19 +314,19 @@ wait_for_container_http "$ORB_CONTAINER" "http://$UPSTREAM_ORB_REGISTRY/v2/" "up
 
 log "Seed upstream registry with mirror/proxy artifacts"
 push_oras_file "$UPSTREAM_HOST_REGISTRY" "$MIRROR_UPSTREAM_REPO" "v1" \
-    "$WORK/seed/mirror-v1.txt" "application/vnd.orb-chrysa.qa.mirror.v1+txt" \
+    "$WORK/seed/mirror-v1.txt" "application/vnd.layerhouse.qa.mirror.v1+txt" \
     "$WORK/upstream-mirror-v1.json"
 MIRROR_V1_DIGEST="$(jq -r '.digest' "$WORK/upstream-mirror-v1.json")"
 push_oras_file "$UPSTREAM_HOST_REGISTRY" "$MIRROR_UPSTREAM_REPO" "v2" \
-    "$WORK/seed/mirror-v2.txt" "application/vnd.orb-chrysa.qa.mirror.v2+txt" \
+    "$WORK/seed/mirror-v2.txt" "application/vnd.layerhouse.qa.mirror.v2+txt" \
     "$WORK/upstream-mirror-v2.json"
 MIRROR_V2_DIGEST="$(jq -r '.digest' "$WORK/upstream-mirror-v2.json")"
 push_oras_file "$UPSTREAM_HOST_REGISTRY" "$CACHE_UPSTREAM_REPO" "v1" \
-    "$WORK/seed/cache-v1.txt" "application/vnd.orb-chrysa.qa.cache.v1+txt" \
+    "$WORK/seed/cache-v1.txt" "application/vnd.layerhouse.qa.cache.v1+txt" \
     "$WORK/upstream-cache-v1.json"
 CACHE_V1_DIGEST="$(jq -r '.digest' "$WORK/upstream-cache-v1.json")"
 push_oras_file "$UPSTREAM_HOST_REGISTRY" "$WARM_UPSTREAM_REPO" "warm" \
-    "$WORK/seed/warm.txt" "application/vnd.orb-chrysa.qa.warm.v1+txt" \
+    "$WORK/seed/warm.txt" "application/vnd.layerhouse.qa.warm.v1+txt" \
     "$WORK/upstream-warm.json"
 WARM_DIGEST="$(jq -r '.digest' "$WORK/upstream-warm.json")"
 printf 'MIRROR_V1_DIGEST=%s\nMIRROR_V2_DIGEST=%s\nCACHE_V1_DIGEST=%s\nWARM_DIGEST=%s\n' \
@@ -435,7 +435,7 @@ cmp "$WORK/seed/warm.txt" "$WORK/warm-pull/warm.txt"
 
 log "Create and trigger push mirror rule"
 push_oras_file "$REGISTRY" "$PUSH_SRC_REPO" "release" \
-    "$WORK/seed/push-release.txt" "application/vnd.orb-chrysa.qa.push.v1+txt" \
+    "$WORK/seed/push-release.txt" "application/vnd.layerhouse.qa.push.v1+txt" \
     "$WORK/orb-push-src.json"
 PUSH_SRC_DIGEST="$(jq -r '.digest' "$WORK/orb-push-src.json")"
 cat > "$WORK/push-rule.json" <<JSON

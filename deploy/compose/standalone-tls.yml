@@ -1,7 +1,7 @@
-# Production Docker Compose — single-node orb-chrysa with Caddy TLS + Kanidm OIDC.
+# Production Docker Compose — single-node layerhouse with Caddy TLS + Kanidm OIDC.
 #
-# Caddy auto-handles Let's Encrypt certs for orb-chrysa.example.com.
-# orb-chrysa runs plain HTTP internally; Caddy terminates TLS.
+# Caddy auto-handles Let's Encrypt certs for layerhouse.example.com.
+# layerhouse runs plain HTTP internally; Caddy terminates TLS.
 #
 # Prerequisites:
 #   1. Ports 80 and 443 must be reachable from the internet (for ACME + registry traffic)
@@ -11,7 +11,7 @@
 # Usage:
 #   docker compose -f standalone-tls.yml up -d
 
-name: orb-chrysa
+name: layerhouse
 
 services:
   caddy:
@@ -55,16 +55,16 @@ services:
       /bin/sh -c "
       RUSTFS_IP=$$(getent hosts rustfs | awk '{print $$1}');
       rc alias set local http://$$RUSTFS_IP:9000 $$RUSTFS_ACCESS_KEY $$RUSTFS_SECRET_KEY;
-      rc bucket create local/orb-chrysa -p;
+      rc bucket create local/layerhouse -p;
       "
     restart: "no"
 
-  orb-chrysa:
-    image: ghcr.io/adamcavendish/orb-chrysa-server:latest
-    hostname: orb-chrysa-0
+  layerhouse:
+    image: ghcr.io/adamcavendish/layerhouse-server:latest
+    hostname: layerhouse-0
     volumes:
-      - ./config/standalone.toml:/etc/orb-chrysa/config.toml:ro
-    command: ["--config", "/etc/orb-chrysa/config.toml"]
+      - ./config/standalone.toml:/etc/layerhouse/config.toml:ro
+    command: ["--config", "/etc/layerhouse/config.toml"]
     depends_on:
       rustfs-init:
         condition: service_completed_successfully

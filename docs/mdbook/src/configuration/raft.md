@@ -4,7 +4,7 @@
 [raft]
 listen = "0.0.0.0:5051"
 data_dir = "/tmp/raft"
-discovery_dns = "orb-chrysa"
+discovery_dns = "layerhouse"
 
 [raft.tls]
 cert_path = "/certs/cert.pem"

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Layerhouse Grid Store mark, dark</title>
+  <desc id="desc">A light house-shaped repository grid optimized for dark backgrounds with layered storage bays and a cyan active bay.</desc>
+  <defs>
+    <linearGradient id="shell" x1="22" y1="18" x2="106" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="16" y1="18" x2="112" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dbe7f5"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="78" y1="50" x2="105" y2="73" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <filter id="glow" x="-24%" y="-24%" width="148%" height="156%">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#020617" flood-opacity=".42"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#38bdf8" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="0" fill="transparent"/>
+  <g filter="url(#glow)">
+    <path d="M18 48.5 64 23l46 25.5v75.5H18Z" fill="url(#shell)"/>
+    <path d="M18 48.5 64 23l46 25.5v14L64 37 18 62.5Z" fill="url(#roof)"/>
+    <path d="M64 23 110 48.5" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".66"/>
+    <path d="M18 48.5 64 23" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".48"/>
+    <rect x="32" y="58" width="22" height="18" rx="4" fill="#1e293b"/>
+    <rect x="61" y="58" width="22" height="18" rx="4" fill="#475569"/>
+    <rect x="90" y="58" width="12" height="18" rx="4" fill="url(#accent)"/>
+    <rect x="32" y="84" width="22" height="18" rx="4" fill="#64748b"/>
+    <rect x="61" y="84" width="41" height="18" rx="4" fill="#334155"/>
+    <path d="M32 110H102" stroke="#64748b" stroke-width="6" stroke-linecap="round" opacity=".42"/>
+    <circle cx="97" cy="63" r="2.7" fill="#ecfeff" opacity=".88"/>
+  </g>
+</svg>

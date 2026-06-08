@@ -2,7 +2,7 @@
 set -euo pipefail
 
 KANIDM_NAMESPACE="${KANIDM_NAMESPACE:-kanidm}"
-ORB_NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+ORB_NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
 KANIDM_URL="${KANIDM_URL:-https://localhost:$KANIDM_HOST_PORT}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
@@ -93,8 +93,8 @@ AUTH="Authorization: Bearer $BEARER"
 
 echo "=== Creating users, groups, and service accounts ==="
 for user_info in \
-    "admin|Admin User|admin@orb-chrysa.local" \
-    "developer|Developer User|developer@orb-chrysa.local"; do
+    "admin|Admin User|admin@layerhouse.local" \
+    "developer|Developer User|developer@layerhouse.local"; do
     name="$(printf '%s' "$user_info" | cut -d'|' -f1)"
     display="$(printf '%s' "$user_info" | cut -d'|' -f2)"
     email="$(printf '%s' "$user_info" | cut -d'|' -f3)"
@@ -143,11 +143,11 @@ OAUTH2_REDIRECT_URL="https://$REGISTRY_ENDPOINT/oauth2/callback"
 OAUTH2_LANDING_URL="https://$REGISTRY_ENDPOINT"
 $CURL -f -H "$AUTH" \
     -H "Content-Type: application/json" \
-    -d "{\"attrs\":{\"name\":[\"orb-chrysa\"],\"displayname\":[\"Orb Chrysa Container Registry\"],\"oauth2_rs_origin\":[\"$OAUTH2_REDIRECT_URL\"],\"oauth2_rs_origin_landing\":[\"$OAUTH2_LANDING_URL\"]}}" \
+    -d "{\"attrs\":{\"name\":[\"layerhouse\"],\"displayname\":[\"Layerhouse Container Registry\"],\"oauth2_rs_origin\":[\"$OAUTH2_REDIRECT_URL\"],\"oauth2_rs_origin_landing\":[\"$OAUTH2_LANDING_URL\"]}}" \
     "$KANIDM_URL/v1/oauth2/_basic" >/dev/null 2>&1 || true
 
 echo "=== Verifying OAuth2 redirect/landing mapping ==="
-OAUTH2_GET_RESP="$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/orb-chrysa" 2>/dev/null || true)"
+OAUTH2_GET_RESP="$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/layerhouse" 2>/dev/null || true)"
 printf '%s\n' "$OAUTH2_GET_RESP" > "$WORK/oauth2-client.json"
 echo "  oauth2_rs_origin=$(printf '%s' "$OAUTH2_GET_RESP" | jq -c '.attrs.oauth2_rs_origin // empty' 2>/dev/null || true)"
 echo "  oauth2_rs_origin_landing=$(printf '%s' "$OAUTH2_GET_RESP" | jq -c '.attrs.oauth2_rs_origin_landing // empty' 2>/dev/null || true)"
@@ -161,14 +161,14 @@ fi
 $CURL -f -H "$AUTH" \
     -H "Content-Type: application/json" \
     -d '["openid","profile","email","groups","oci_admin"]' \
-    "$KANIDM_URL/v1/oauth2/orb-chrysa/_scopemap/registry_admins" -X POST >/dev/null 2>&1 || true
+    "$KANIDM_URL/v1/oauth2/layerhouse/_scopemap/registry_admins" -X POST >/dev/null 2>&1 || true
 $CURL -f -H "$AUTH" \
     -H "Content-Type: application/json" \
     -d '["openid","profile","email","groups","oci_push","oci_pull"]' \
-    "$KANIDM_URL/v1/oauth2/orb-chrysa/_scopemap/registry_developers" -X POST >/dev/null 2>&1 || true
+    "$KANIDM_URL/v1/oauth2/layerhouse/_scopemap/registry_developers" -X POST >/dev/null 2>&1 || true
 
 echo "=== Getting client secret and ci-bot token ==="
-CLIENT_SECRET="$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/orb-chrysa/_basic_secret" | tr -d '"' | tr -d '\n')"
+CLIENT_SECRET="$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/layerhouse/_basic_secret" | tr -d '"' | tr -d '\n')"
 if [ -z "$CLIENT_SECRET" ] || [ "$CLIENT_SECRET" = "null" ]; then
     echo "ERROR: failed to get OAuth client secret" >&2
     exit 1
@@ -176,7 +176,7 @@ fi
 
 API_TOKEN_RESP="$($CURL -f -H "$AUTH" \
     -H "Content-Type: application/json" \
-    -d "{\"label\":\"orb-chrysa-tilt\",\"expiry\":$KANIDM_API_TOKEN_EXPIRY,\"read_write\":false}" \
+    -d "{\"label\":\"layerhouse-tilt\",\"expiry\":$KANIDM_API_TOKEN_EXPIRY,\"read_write\":false}" \
     "$KANIDM_URL/v1/service_account/ci-bot/_api_token" 2>&1 || true)"
 printf '%s\n' "$API_TOKEN_RESP" > "$WORK/ci-bot-api-token-response.json"
 CI_API_TOKEN="$(printf '%s\n' "$API_TOKEN_RESP" | jq -r 'if type == "string" then . else (.token // .api_token // empty) end' 2>/dev/null || true)"
@@ -189,10 +189,10 @@ fi
 TOKEN_EXCHANGE_RESP="$($CURL -f \
     -H "Content-Type: application/x-www-form-urlencoded" \
     --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-    --data-urlencode "client_id=orb-chrysa" \
+    --data-urlencode "client_id=layerhouse" \
     --data-urlencode "subject_token=$CI_API_TOKEN" \
     --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
-    --data-urlencode "audience=orb-chrysa" \
+    --data-urlencode "audience=layerhouse" \
     --data-urlencode "scope=openid profile email groups oci_admin" \
     "$KANIDM_URL/oauth2/token" 2>&1 || true)"
 printf '%s\n' "$TOKEN_EXCHANGE_RESP" > "$WORK/ci-bot-token-exchange-response.json"
@@ -209,12 +209,12 @@ TOKEN_SIGNING_KEYS="[\"$SIGNING_KEY_B64\"]"
 
 echo "=== Writing Kubernetes Secrets ==="
 kubectl create namespace "$ORB_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n "$ORB_NAMESPACE" create secret generic orb-chrysa-auth \
+kubectl -n "$ORB_NAMESPACE" create secret generic layerhouse-auth \
     --from-literal=client_secret="$CLIENT_SECRET" \
     --from-literal=token_signing_keys="$TOKEN_SIGNING_KEYS" \
     --from-literal=session_encryption_key="$ENCRYPTION_KEY_B64" \
     --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n "$ORB_NAMESPACE" create secret generic orb-chrysa-test-auth \
+kubectl -n "$ORB_NAMESPACE" create secret generic layerhouse-test-auth \
     --from-literal=ci_bot_token="$CI_TOKEN" \
     --from-literal=ci_bot_api_token="$CI_API_TOKEN" \
     --from-literal=admin_password="$ADMIN_USER_PW" \

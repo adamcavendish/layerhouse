@@ -1,6 +1,6 @@
-# Single-node orb-chrysa with local RustFS.
+# Single-node layerhouse with local RustFS.
 # Paths assume binaries are run from the same directory as this config file,
-# or set ORB_CHRYSA_HOME to the directory containing config/.
+# or set LAYERHOUSE_HOME to the directory containing config/.
 
 [server]
 listen = "127.0.0.1:5050"
@@ -11,9 +11,9 @@ max_concurrent_requests = 128
 
 [storage.s3]
 endpoint = "http://127.0.0.1:9000"
-bucket = "orb-chrysa"
+bucket = "layerhouse"
 region = "us-east-1"
-access_key = "orb-chrysa"
+access_key = "layerhouse"
 secret_key = "change-me-in-production"
 path_style = true
 

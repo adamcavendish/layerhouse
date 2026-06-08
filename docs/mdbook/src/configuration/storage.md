@@ -3,7 +3,7 @@
 ```toml
 [storage.s3]
 endpoint = "http://rustfs:9000"
-bucket = "orb-chrysa"
+bucket = "layerhouse"
 region = "us-east-1"
 access_key = "rustfsadmin"
 secret_key = "rustfsadmin"

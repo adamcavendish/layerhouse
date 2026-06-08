@@ -2,8 +2,8 @@
 set -euo pipefail
 
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
 KANIDM_URL="${KANIDM_URL:-https://localhost:$KANIDM_HOST_PORT}"
@@ -57,7 +57,7 @@ wait_ready_replicas() {
     local ready
 
     for _ in $(seq 1 180); do
-        ready="$(kubectl -n "$NAMESPACE" get statefulset orb-chrysa -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
+        ready="$(kubectl -n "$NAMESPACE" get statefulset layerhouse -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
         ready="${ready:-0}"
         if [ "$ready" = "$expected" ]; then
             return 0
@@ -66,7 +66,7 @@ wait_ready_replicas() {
     done
 
     echo "ERROR: StatefulSet did not reach $expected ready replicas" >&2
-    kubectl -n "$NAMESPACE" get statefulset orb-chrysa -o yaml > "$WORK/statefulset-timeout.yaml" 2>&1 || true
+    kubectl -n "$NAMESPACE" get statefulset layerhouse -o yaml > "$WORK/statefulset-timeout.yaml" 2>&1 || true
     return 1
 }
 
@@ -74,9 +74,9 @@ scale_orb() {
     local replicas="$1"
     local label="$2"
 
-    echo "=== Scale Orb Chrysa to $replicas replicas ($label) ==="
-    record kubectl -n "$NAMESPACE" scale statefulset/orb-chrysa --replicas="$replicas"
-    record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=420s
+    echo "=== Scale Layerhouse to $replicas replicas ($label) ==="
+    record kubectl -n "$NAMESPACE" scale statefulset/layerhouse --replicas="$replicas"
+    record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=420s
     wait_ready_replicas "$replicas"
     kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/pods-$label.txt"
     assert_cluster_size "$replicas" "$WORK/cluster-status-$label.json"
@@ -86,7 +86,7 @@ scale_orb() {
 cleanup() {
     status=$?
     if [ "${RESTORE_ON_EXIT:-1}" = "1" ]; then
-        kubectl -n "$NAMESPACE" scale statefulset/orb-chrysa --replicas="$RESTORE_REPLICAS" >/dev/null 2>&1 || true
+        kubectl -n "$NAMESPACE" scale statefulset/layerhouse --replicas="$RESTORE_REPLICAS" >/dev/null 2>&1 || true
     fi
     if [ "$status" -eq 0 ]; then
         echo "PASS Tilt scale smoke. Evidence: $WORK"
@@ -113,15 +113,15 @@ need kubectl
     echo "SMOKE_IMAGE=$SMOKE_IMAGE"
 } > "$WORK/summary.env"
 
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=360s
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=360s
 TRUST_WORK="$WORK/node-trust"
 mkdir -p "$TRUST_WORK"
 chmod 0700 "$TRUST_WORK"
 WORK="$TRUST_WORK" REGISTRY_ENDPOINT="$REGISTRY_ENDPOINT" ORB_NAMESPACE="$NAMESPACE" tests/k8s/tilt/kind-node-trust.sh \
     2>&1 | tee -a "$WORK/commands.log"
 
-CA="$WORK/orb-chrysa-ca.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
+CA="$WORK/layerhouse-ca.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
 CI_TOKEN="$(refresh_ci_bot_token)"
 PAT="$(create_pat "$CI_TOKEN" tilt-scale-smoke)"
 if [ -z "$PAT" ] || [ "$PAT" = "null" ]; then

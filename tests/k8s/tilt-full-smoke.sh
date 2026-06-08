@@ -2,9 +2,9 @@
 set -euo pipefail
 
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
-S3_NAMESPACE="${RUSTFS_NAMESPACE:-orb-chrysa-tilt-s3}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
+S3_NAMESPACE="${RUSTFS_NAMESPACE:-layerhouse-tilt-s3}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
 KANIDM_URL="${KANIDM_URL:-https://localhost:$KANIDM_HOST_PORT}"
@@ -111,15 +111,15 @@ if ! wait_for_kubernetes_api_access; then
 fi
 
 record_retry kubectl -n cert-manager rollout status deploy/cert-manager --timeout=180s
-record_retry kubectl -n cert-manager wait --for=condition=Ready certificate/orb-chrysa-ca --timeout=180s
+record_retry kubectl -n cert-manager wait --for=condition=Ready certificate/layerhouse-ca --timeout=180s
 record_retry kubectl -n "$S3_NAMESPACE" rollout status deploy/rustfs --timeout=180s
 record_retry kubectl -n "$S3_NAMESPACE" wait --for=condition=complete job/rustfs-init --timeout=180s
 record_retry kubectl -n kanidm rollout status deploy/kanidm --timeout=240s
-record_retry kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=360s
-kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/orb-chrysa-pods.txt"
+record_retry kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=360s
+kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/layerhouse-pods.txt"
 
-CA="$WORK/orb-chrysa-ca.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
+CA="$WORK/layerhouse-ca.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
 CI_TOKEN="$(refresh_ci_bot_token)"
 
 echo "=== Configure Docker trust for $REGISTRY_ENDPOINT ==="
@@ -152,7 +152,7 @@ if [ "$HTTP_CODE" != "401" ]; then
 fi
 
 BASE_IMAGE="$(resolve_smoke_base_image)"
-printf 'hello from orb-chrysa tilt smoke %s\n' "$RUN_ID" > "$WORK/dockerctx/hello.txt"
+printf 'hello from layerhouse tilt smoke %s\n' "$RUN_ID" > "$WORK/dockerctx/hello.txt"
 printf 'FROM %s\nCOPY hello.txt /hello.txt\n' "$BASE_IMAGE" > "$WORK/dockerctx/Dockerfile"
 record docker build --provenance=false --sbom=false -t "$SMOKE_IMAGE" "$WORK/dockerctx"
 
@@ -175,7 +175,7 @@ echo "=== Verify node containerd pulls ==="
 verify_node_pull "$SMOKE_IMAGE" "$PAT"
 
 echo "=== Verify Kubernetes image pull ==="
-kubectl -n "$NAMESPACE" create secret docker-registry orb-chrysa-pull \
+kubectl -n "$NAMESPACE" create secret docker-registry layerhouse-pull \
     --docker-server="$REGISTRY_ENDPOINT" \
     --docker-username=ci-bot \
     --docker-password="$PAT" \
@@ -184,7 +184,7 @@ kubectl -n "$NAMESPACE" delete pod "orb-smoke-$RUN_ID" --ignore-not-found
 record kubectl -n "$NAMESPACE" run "orb-smoke-$RUN_ID" \
     --image="$SMOKE_IMAGE" \
     --restart=Never \
-    --overrides='{"spec":{"imagePullSecrets":[{"name":"orb-chrysa-pull"}]}}' \
+    --overrides='{"spec":{"imagePullSecrets":[{"name":"layerhouse-pull"}]}}' \
     --command -- /bin/sh -c 'cat /hello.txt; sleep 5'
 record kubectl -n "$NAMESPACE" wait --for=condition=Ready "pod/orb-smoke-$RUN_ID" --timeout=180s
 kubectl -n "$NAMESPACE" logs "pod/orb-smoke-$RUN_ID" | tee "$WORK/kubectl-run.log"

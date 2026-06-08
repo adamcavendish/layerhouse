@@ -1,4 +1,4 @@
-# Standalone Mode Test Plan — orb-chrysa
+# Standalone Mode Test Plan — layerhouse
 
 **Date**: 2026-05-22
 **Type**: Test Plan
@@ -10,7 +10,7 @@
 
 ## Architecture Summary
 
-- **Single node**: `orb-chrysa-0` (node_id=1), no peers
+- **Single node**: `layerhouse-0` (node_id=1), no peers
 - **Self-bootstrap**: Node 0 bootstraps immediately as single-node cluster
 - **Always leader**: No election, no quorum concerns
 - **No DNS discovery**: No `discovery_dns` needed (or resolves only self)
@@ -134,7 +134,7 @@ single-node topology.
 **Precondition**: Standalone node with data, unclean shutdown.
 
 **Steps**:
-1. `docker kill --signal=KILL orb-chrysa-standalone`
+1. `docker kill --signal=KILL layerhouse-standalone`
 2. Restart: `docker compose -f deploy/compose/standalone.yml up -d`
 3. Check logs and data
 
@@ -211,7 +211,7 @@ single-node topology.
 
 - `docker compose` v2
 - RustFS images available
-- orb-chrysa Docker image built
+- layerhouse Docker image built
 - Port 5050 free on host
 - `curl` and `jq` for CLI verification
 

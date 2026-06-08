@@ -15,7 +15,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: adamcavendish/orb-chrysa-server
+  IMAGE_NAME: adamcavendish/layerhouse-server
 
 jobs:
   # Cross-compile the server binary for all target architectures using
@@ -54,7 +54,7 @@ jobs:
 
       - name: Install dashboard dependencies
         run: vp install
-        working-directory: crates/orb-chrysa-server/dashboard
+        working-directory: crates/layerhouse-server/dashboard
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -64,7 +64,7 @@ jobs:
 
       - name: Build all targets
         run: |
-          cargo zigbuild --release -p orb-chrysa-server \
+          cargo zigbuild --release -p layerhouse-server \
             --target x86_64-unknown-linux-gnu \
             --target aarch64-unknown-linux-gnu \
             --target armv7-unknown-linux-gnueabihf
@@ -74,9 +74,9 @@ jobs:
         with:
           name: binaries
           path: |
-            target/x86_64-unknown-linux-gnu/release/orb-chrysa-server
-            target/aarch64-unknown-linux-gnu/release/orb-chrysa-server
-            target/armv7-unknown-linux-gnueabihf/release/orb-chrysa-server
+            target/x86_64-unknown-linux-gnu/release/layerhouse-server
+            target/aarch64-unknown-linux-gnu/release/layerhouse-server
+            target/armv7-unknown-linux-gnueabihf/release/layerhouse-server
           retention-days: 1
 
   # One matrix job per architecture. Each copies its pre-built binary from
@@ -129,8 +129,8 @@ jobs:
 
       - name: Copy ${{ matrix.platform.target }} binary
         run: |
-          cp "target/${{ matrix.platform.target }}/release/orb-chrysa-server" ./orb-chrysa-server
-          chmod +x ./orb-chrysa-server
+          cp "target/${{ matrix.platform.target }}/release/layerhouse-server" ./layerhouse-server
+          chmod +x ./layerhouse-server
 
       - name: Build and push by digest
         id: build
@@ -209,7 +209,7 @@ jobs:
           VERSION="${{ github.ref_name }}"
           mkdir -p dist
           helm package deploy/kubernetes/helm --version "$VERSION" --app-version "$VERSION" --destination dist
-          echo "Chart packaged: dist/orb-chrysa-$VERSION.tgz"
+          echo "Chart packaged: dist/layerhouse-$VERSION.tgz"
 
       - name: Upload chart to release
         uses: softprops/action-gh-release@v2

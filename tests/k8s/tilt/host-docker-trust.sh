@@ -2,8 +2,8 @@
 set -euo pipefail
 
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
-SECRET_NAME="${SERVER_TLS_SECRET:-orb-chrysa-server-tls}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
+SECRET_NAME="${SERVER_TLS_SECRET:-layerhouse-server-tls}"
 EVIDENCE_ROOT="${EVIDENCE_ROOT:-target/tilt}"
 CA_FILE=""
 RESTART_DOCKERD=1
@@ -15,16 +15,16 @@ usage() {
     cat <<'USAGE'
 Usage: tests/k8s/tilt/host-docker-trust.sh [options]
 
-Install the Tilt Orb Chrysa server CA into the host Docker daemon trust path.
+Install the Tilt Layerhouse server CA into the host Docker daemon trust path.
 
 Options:
   --registry-endpoint HOST:PORT  Registry endpoint to trust. Default: localhost:32050
-  --namespace NAME               Namespace containing the server TLS Secret. Default: orb-chrysa-tilt
-  --secret NAME                  Server TLS Secret name. Default: orb-chrysa-server-tls
+  --namespace NAME               Namespace containing the server TLS Secret. Default: layerhouse-tilt
+  --secret NAME                  Server TLS Secret name. Default: layerhouse-server-tls
   --ca-file PATH                 Use an existing CA file instead of reading Kubernetes
   --no-restart                   Do not restart/reload dockerd if verification still fails
   --no-verify                    Install files only; skip Docker daemon verification
-  --wait-kubernetes              Wait for the Kubernetes API and Orb Chrysa Secret after Docker restart
+  --wait-kubernetes              Wait for the Kubernetes API and Layerhouse Secret after Docker restart
   -h, --help                     Show this help
 
 OrbStack note:
@@ -96,7 +96,7 @@ need base64
 
 WORK="$EVIDENCE_ROOT/host-docker-trust"
 mkdir -p "$WORK"
-CA="$WORK/orb-chrysa-server-ca.crt"
+CA="$WORK/layerhouse-server-ca.crt"
 
 if [ -n "$CA_FILE" ]; then
     cp "$CA_FILE" "$CA"
@@ -162,7 +162,7 @@ wait_for_kubernetes_api() {
 
 verify_docker_trust() {
     local output="$WORK/docker-trust-verify.log"
-    local probe_image="$REGISTRY_ENDPOINT/orb-chrysa/host-docker-trust-probe:missing"
+    local probe_image="$REGISTRY_ENDPOINT/layerhouse/host-docker-trust-probe:missing"
     local status
 
     log "Verifying host Docker daemon TLS trust"
@@ -195,10 +195,10 @@ verify_docker_trust() {
 install_orbstack_system_ca() {
     log "Installing CA into OrbStack VM system trust"
     docker run --rm --privileged --pid=host -v /:/host \
-        --mount "type=bind,src=$CA_ABS,dst=/tmp/orb-chrysa-ca.crt,readonly" \
+        --mount "type=bind,src=$CA_ABS,dst=/tmp/layerhouse-ca.crt,readonly" \
         "$HELPER_IMAGE" sh -eu -c "
             mkdir -p /host/usr/local/share/ca-certificates
-            cp /tmp/orb-chrysa-ca.crt /host/usr/local/share/ca-certificates/orb-chrysa-${slug}.crt
+            cp /tmp/layerhouse-ca.crt /host/usr/local/share/ca-certificates/layerhouse-${slug}.crt
             chroot /host /usr/sbin/update-ca-certificates
         "
 }

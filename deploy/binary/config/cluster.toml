@@ -1,9 +1,9 @@
-# Three-node orb-chrysa Raft cluster.
-# Run one instance on each host with HOSTNAME set to orb-chrysa-{0,1,2}.
+# Three-node layerhouse Raft cluster.
+# Run one instance on each host with HOSTNAME set to layerhouse-{0,1,2}.
 #
-#   HOSTNAME=orb-chrysa-0 orb-chrysa-server --config cluster.toml
-#   HOSTNAME=orb-chrysa-1 orb-chrysa-server --config cluster.toml
-#   HOSTNAME=orb-chrysa-2 orb-chrysa-server --config cluster.toml
+#   HOSTNAME=layerhouse-0 layerhouse-server --config cluster.toml
+#   HOSTNAME=layerhouse-1 layerhouse-server --config cluster.toml
+#   HOSTNAME=layerhouse-2 layerhouse-server --config cluster.toml
 
 [server]
 listen = "0.0.0.0:5050"
@@ -14,9 +14,9 @@ max_concurrent_requests = 512
 
 [storage.s3]
 endpoint = "http://<s3-endpoint>:9000"
-bucket = "orb-chrysa"
+bucket = "layerhouse"
 region = "us-east-1"
-access_key = "orb-chrysa"
+access_key = "layerhouse"
 secret_key = "change-me-in-production"
 path_style = true
 
@@ -26,4 +26,4 @@ enabled = false
 [raft]
 listen = "0.0.0.0:5051"
 data_dir = "./data/raft"
-discovery_dns = "orb-chrysa"
+discovery_dns = "layerhouse"

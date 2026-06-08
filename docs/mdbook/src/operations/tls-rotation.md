@@ -7,8 +7,8 @@
 3. Restart the StatefulSet pods one at a time:
 
    ```bash
-   kubectl -n orb-chrysa rollout restart statefulset/orb-chrysa
-   kubectl -n orb-chrysa rollout status statefulset/orb-chrysa
+   kubectl -n layerhouse rollout restart statefulset/layerhouse
+   kubectl -n layerhouse rollout status statefulset/layerhouse
    ```
 
 4. Update node container runtime trust if the issuing CA changed.

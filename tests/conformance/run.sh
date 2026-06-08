@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OCI Distribution Conformance Test Suite runner for orb-chrysa.
+# OCI Distribution Conformance Test Suite runner for layerhouse.
 #
 # Upstream docs:
 #   https://github.com/opencontainers/distribution-spec/blob/v1.1.1/conformance/README.md
@@ -10,13 +10,13 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results"
 REQUESTED_REPORT_DIR="${OCI_REPORT_DIR:-$RESULTS_DIR}"
 COMPOSE_FILE="$PROJECT_DIR/deploy/compose/standalone.yml"
-COMPOSE_PROJECT="orb-chrysa-conformance"
+COMPOSE_PROJECT="layerhouse-conformance"
 CONFORMANCE_BIN="$SCRIPT_DIR/conformance.test"
 DIST_SPEC_DIR="$SCRIPT_DIR/.distribution-spec"
 DEFAULT_DISTRIBUTION_SPEC_REF="$(tr -d '[:space:]' < "$SCRIPT_DIR/distribution-spec.ref")"
 DISTRIBUTION_SPEC_URL="${OCI_DISTRIBUTION_SPEC_URL:-https://github.com/opencontainers/distribution-spec.git}"
 DISTRIBUTION_SPEC_REF="${OCI_DISTRIBUTION_SPEC_REF:-$DEFAULT_DISTRIBUTION_SPEC_REF}"
-DISTRIBUTION_SPEC_REF_FILE="$DIST_SPEC_DIR/.orb-chrysa-ref"
+DISTRIBUTION_SPEC_REF_FILE="$DIST_SPEC_DIR/.layerhouse-ref"
 
 if [ -z "$DISTRIBUTION_SPEC_REF" ]; then
     echo "ERROR: tests/conformance/distribution-spec.ref is empty" >&2
@@ -51,20 +51,20 @@ if [ ! -f "$CONFORMANCE_BIN" ] || [ "$(cat "$DISTRIBUTION_SPEC_REF_FILE" 2>/dev/
     echo "Binary: $CONFORMANCE_BIN"
 fi
 
-echo "=== Building orb-chrysa ==="
+echo "=== Building layerhouse ==="
 (cd "$PROJECT_DIR" && docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT" build)
 
 echo "=== Starting services ==="
 docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT" up -d
 
-echo "=== Waiting for orb-chrysa to be ready ==="
+echo "=== Waiting for layerhouse to be ready ==="
 for i in $(seq 1 30); do
     if curl -sf http://localhost:5050/v2/ >/dev/null 2>&1; then
-        echo "orb-chrysa is ready"
+        echo "layerhouse is ready"
         break
     fi
     if [ "$i" -eq 30 ]; then
-        echo "ERROR: orb-chrysa did not become ready"
+        echo "ERROR: layerhouse did not become ready"
         docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT" logs
         exit 1
     fi

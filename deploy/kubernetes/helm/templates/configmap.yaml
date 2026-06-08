@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}-config
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}-config
+  namespace: {{ include "layerhouse.namespace" . }}
   labels:
-    {{- include "orb-chrysa.labels" . | nindent 4 }}
+    {{- include "layerhouse.labels" . | nindent 4 }}
 data:
   config.toml.tpl: |
     [server]
@@ -15,8 +15,8 @@ data:
     max_concurrent_requests = 512
 
     [server.tls]
-    cert_path = "/etc/orb-chrysa/tls/tls.crt"
-    key_path = "/etc/orb-chrysa/tls/tls.key"
+    cert_path = "/etc/layerhouse/tls/tls.crt"
+    key_path = "/etc/layerhouse/tls/tls.key"
 
     [storage.s3]
     endpoint = {{ required "storage.s3.endpoint is required" .Values.storage.s3.endpoint | quote }}
@@ -34,18 +34,18 @@ data:
     [raft]
     listen = "0.0.0.0:5051"
     data_dir = "/tmp/raft"
-    discovery_dns = "{{ include "orb-chrysa.fullname" . }}-headless"
+    discovery_dns = "{{ include "layerhouse.fullname" . }}-headless"
 
     [raft.tls]
-    cert_path = "/etc/orb-chrysa/raft-tls/tls.crt"
-    key_path = "/etc/orb-chrysa/raft-tls/tls.key"
-    server_ca_path = "/etc/orb-chrysa/raft-tls/server-ca.crt"
-    client_ca_path = "/etc/orb-chrysa/raft-tls/client-ca.crt"
+    cert_path = "/etc/layerhouse/raft-tls/tls.crt"
+    key_path = "/etc/layerhouse/raft-tls/tls.key"
+    server_ca_path = "/etc/layerhouse/raft-tls/server-ca.crt"
+    client_ca_path = "/etc/layerhouse/raft-tls/client-ca.crt"
 
     [raft.kubernetes]
     enabled = {{ .Values.raft.kubernetes.enabled }}
-    namespace = {{ include "orb-chrysa.namespace" . | quote }}
-    statefulset_name = {{ default (include "orb-chrysa.fullname" .) .Values.raft.kubernetes.statefulSetName | quote }}
+    namespace = {{ include "layerhouse.namespace" . | quote }}
+    statefulset_name = {{ default (include "layerhouse.fullname" .) .Values.raft.kubernetes.statefulSetName | quote }}
     reconcile_seconds = {{ .Values.raft.kubernetes.reconcileSeconds }}
     {{- if .Values.auth.enabled }}
 

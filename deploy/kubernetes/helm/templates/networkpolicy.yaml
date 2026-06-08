@@ -2,21 +2,21 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}-raft
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}-raft
+  namespace: {{ include "layerhouse.namespace" . }}
   labels:
-    {{- include "orb-chrysa.labels" . | nindent 4 }}
+    {{- include "layerhouse.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+      app.kubernetes.io/name: {{ include "layerhouse.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes: ["Ingress"]
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+              app.kubernetes.io/name: {{ include "layerhouse.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
       ports:
         - protocol: TCP

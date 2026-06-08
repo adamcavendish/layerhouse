@@ -1,6 +1,6 @@
 # Deployment
 
-orb-chrysa is a single-binary OCI registry. It can be deployed in three ways:
+layerhouse is a single-binary OCI registry. It can be deployed in three ways:
 
 | Mode | Orchestrator | Scaling | Best for |
 |---|---|---|---|
@@ -14,7 +14,7 @@ metadata replication identically in all three modes.
 
 ## What you need for any deployment
 
-1. **orb-chrysa binary** — from [releases](https://github.com/adamcavendish/orb-chrysa/releases) or built from source
+1. **layerhouse binary** — from [releases](https://github.com/adamcavendish/layerhouse/releases) or built from source
 2. **S3-compatible storage** — RustFS, MinIO, AWS S3, or any S3 API-compatible store
 3. **Configuration** — a TOML file with server, storage, and raft sections
 

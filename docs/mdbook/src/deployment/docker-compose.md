@@ -1,25 +1,25 @@
 # Docker Compose
 
-Single-node orb-chrysa with Caddy for automatic TLS and OIDC
+Single-node layerhouse with Caddy for automatic TLS and OIDC
 authentication (kanidm shown).
 
 ## Architecture
 
 ```
-Internet :443 → Caddy (TLS, auto Let's Encrypt) → orb-chrysa:5050 (plain HTTP)
+Internet :443 → Caddy (TLS, auto Let's Encrypt) → layerhouse:5050 (plain HTTP)
                 RustFS :9000 (S3-compatible blob storage)
                 Kanidm (remote OIDC provider)
 ```
 
-Caddy terminates TLS and reverse-proxies to orb-chrysa. orb-chrysa runs plain
-HTTP internally — no TLS configuration needed in orb-chrysa itself.
+Caddy terminates TLS and reverse-proxies to layerhouse. layerhouse runs plain
+HTTP internally — no TLS configuration needed in layerhouse itself.
 
 ## Quick start
 
 ```bash
 # 1. Set secrets
 cat > .env << 'EOF'
-RUSTFS_ACCESS_KEY=orb-chrysa
+RUSTFS_ACCESS_KEY=layerhouse
 RUSTFS_SECRET_KEY=<generate-a-strong-secret>
 EOF
 
@@ -34,12 +34,12 @@ docker compose up -d
 ## Directory layout
 
 ```
-~/orb-chrysa/
+~/layerhouse/
 ├── .env                   # S3 credentials (git-ignored)
 ├── Caddyfile              # Caddy reverse-proxy config
 ├── docker-compose.yml     # Service definitions
 ├── config/
-│   └── standalone.toml    # orb-chrysa server config
+│   └── standalone.toml    # layerhouse server config
 └── data/
     ├── caddy/             # TLS certs (auto-managed by Caddy)
     └── rustfs/            # Blob storage (bind mount, not named volume)
@@ -53,8 +53,8 @@ are explicit and portable.
 ### Caddyfile
 
 ```
-orb-chrysa.example.com {
-    reverse_proxy orb-chrysa:5050
+layerhouse.example.com {
+    reverse_proxy layerhouse:5050
 }
 ```
 
@@ -73,9 +73,9 @@ max_concurrent_requests = 512
 
 [storage.s3]
 endpoint = "http://rustfs:9000"
-bucket = "orb-chrysa"
+bucket = "layerhouse"
 region = "us-east-1"
-access_key = "orb-chrysa"
+access_key = "layerhouse"
 secret_key = "<same-as-.env-RUSTFS_SECRET_KEY>"
 path_style = true
 
@@ -85,25 +85,25 @@ enabled = false
 [raft]
 listen = "0.0.0.0:5051"
 data_dir = "/tmp/raft"
-discovery_dns = "orb-chrysa"
+discovery_dns = "layerhouse"
 
 [auth]
-issuer_url = "https://kani.example.com/oauth2/openid/orb-chrysa"
-client_id = "orb-chrysa"
+issuer_url = "https://kani.example.com/oauth2/openid/layerhouse"
+client_id = "layerhouse"
 client_secret = "<kanidm-oauth2-client-secret>"
-token_endpoint_url = "https://orb-chrysa.example.com/v2/token"
-redirect_uri = "https://orb-chrysa.example.com/oauth2/callback"
+token_endpoint_url = "https://layerhouse.example.com/v2/token"
+redirect_uri = "https://layerhouse.example.com/oauth2/callback"
 token_signing_keys = ["<base64-32-byte-key>"]
 session_encryption_key = "<base64-32-byte-key>"
 
 [[auth.permissions]]
 name = "admin-full-access"
-groups = ["orb_chrysa_admins"]
+groups = ["layerhouse_admins"]
 scopes = ["repository:*:*"]
 
 [[auth.permissions]]
 name = "developer-access"
-groups = ["orb_chrysa_developers"]
+groups = ["layerhouse_developers"]
 scopes = ["repository:dev/*:push", "repository:dev/*:pull"]
 ```
 
@@ -118,8 +118,8 @@ python3 -c "import secrets, base64; print(base64.b64encode(secrets.token_bytes(3
 ### 1. Create groups
 
 ```
-orb_chrysa_admins
-orb_chrysa_developers
+layerhouse_admins
+layerhouse_developers
 ```
 
 ### 2. Create OAuth2 client
@@ -128,10 +128,10 @@ Create a **confidential** OAuth2 client via `oauth2/_basic`:
 
 | Field | Value |
 |---|---|
-| Name | `orb-chrysa` |
-| Display name | `Orb Chrysa Container Registry` |
-| `oauth2_rs_origin` | `https://orb-chrysa.example.com/oauth2/callback` |
-| `oauth2_rs_origin_landing` | `https://orb-chrysa.example.com` |
+| Name | `layerhouse` |
+| Display name | `Layerhouse Container Registry` |
+| `oauth2_rs_origin` | `https://layerhouse.example.com/oauth2/callback` |
+| `oauth2_rs_origin_landing` | `https://layerhouse.example.com` |
 
 ### 3. Configure scopemaps
 
@@ -141,8 +141,8 @@ default, so it must be included.
 
 | Group | Scopes |
 |---|---|
-| `orb_chrysa_admins` | `openid`, `profile`, `email`, `groups`, `oci_admin`, `oci_pull`, `oci_push` |
-| `orb_chrysa_developers` | `openid`, `profile`, `email`, `groups`, `oci_pull`, `oci_push` |
+| `layerhouse_admins` | `openid`, `profile`, `email`, `groups`, `oci_admin`, `oci_pull`, `oci_push` |
+| `layerhouse_developers` | `openid`, `profile`, `email`, `groups`, `oci_pull`, `oci_push` |
 
 > **Why `groups` matters**: Docker's OAuth2 credential flow requests `groups`
 > alongside `openid`. Without it, Kanidm rejects the entire authorization with
@@ -152,29 +152,29 @@ default, so it must be included.
 ### 4. Add users to groups
 
 Add users who need registry access to the appropriate group. Users in
-`orb_chrysa_admins` get full `repository:*:*` access. Users in
-`orb_chrysa_developers` get push/pull on `dev/*` repositories.
+`layerhouse_admins` get full `repository:*:*` access. Users in
+`layerhouse_developers` get push/pull on `dev/*` repositories.
 
 ## Operations
 
 ### Check status
 
 ```bash
-curl -k https://orb-chrysa.example.com/v2/        # 401 = auth working
-curl -k https://orb-chrysa.example.com/healthz     # health check
+curl -k https://layerhouse.example.com/v2/        # 401 = auth working
+curl -k https://layerhouse.example.com/healthz     # health check
 ```
 
 ### View logs
 
 ```bash
-docker compose logs orb-chrysa
+docker compose logs layerhouse
 docker compose logs caddy
 ```
 
 ### Restart after config change
 
 ```bash
-docker compose restart orb-chrysa
+docker compose restart layerhouse
 ```
 
 ### Rotate S3 credentials
@@ -182,7 +182,7 @@ docker compose restart orb-chrysa
 1. Update `RUSTFS_SECRET_KEY` in `.env`
 2. Update `secret_key` in `config/standalone.toml`
 3. `docker compose up -d --force-recreate rustfs rustfs-init`
-4. `docker compose restart orb-chrysa`
+4. `docker compose restart layerhouse`
 
 ## Files in `deploy/compose/`
 

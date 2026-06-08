@@ -1,6 +1,6 @@
 # OCI Distribution Spec
 
-Orb Chrysa implements the [OCI Distribution Specification v1.1](https://github.com/opencontainers/distribution-spec).
+Layerhouse implements the [OCI Distribution Specification v1.1](https://github.com/opencontainers/distribution-spec).
 
 ## Conformance
 
@@ -32,7 +32,7 @@ All required endpoints from the specification are implemented:
 
 ## OCI Error Codes
 
-Orb Chrysa returns standard OCI error codes in the response body:
+Layerhouse returns standard OCI error codes in the response body:
 
 ```json
 {

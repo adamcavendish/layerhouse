@@ -41,27 +41,27 @@ record helm package deploy/kubernetes/helm \
     --app-version "$VERSION" \
     --destination "$WORK/dist"
 
-CHART="$WORK/dist/orb-chrysa-$VERSION.tgz"
+CHART="$WORK/dist/layerhouse-$VERSION.tgz"
 if [ ! -s "$CHART" ]; then
     echo "ERROR: expected chart archive was not created: $CHART" >&2
     exit 1
 fi
 
-tar -xOf "$CHART" orb-chrysa/Chart.yaml > "$WORK/Chart.yaml"
+tar -xOf "$CHART" layerhouse/Chart.yaml > "$WORK/Chart.yaml"
 grep -q "^version: $VERSION$" "$WORK/Chart.yaml"
 grep -q "^appVersion: $VERSION$" "$WORK/Chart.yaml"
 
-record helm template orb-chrysa "$CHART" \
-    --namespace orb-chrysa \
+record helm template layerhouse "$CHART" \
+    --namespace layerhouse \
     -f deploy/kubernetes/helm/test-values/minimal.yaml \
     > "$WORK/render-default.yaml"
-grep -q "image: \"ghcr.io/adamcavendish/orb-chrysa-server:$VERSION\"" "$WORK/render-default.yaml"
+grep -q "image: \"ghcr.io/adamcavendish/layerhouse-server:$VERSION\"" "$WORK/render-default.yaml"
 
-record helm template orb-chrysa "$CHART" \
-    --namespace orb-chrysa \
+record helm template layerhouse "$CHART" \
+    --namespace layerhouse \
     -f deploy/kubernetes/helm/test-values/minimal.yaml \
     --set image.tag=tilt \
     > "$WORK/render-override.yaml"
-grep -q 'image: "ghcr.io/adamcavendish/orb-chrysa-server:tilt"' "$WORK/render-override.yaml"
+grep -q 'image: "ghcr.io/adamcavendish/layerhouse-server:tilt"' "$WORK/render-override.yaml"
 
 echo "PASS release dry run. Evidence: $WORK"

@@ -1,11 +1,11 @@
 # Mirror & Proxy Cache
 
-orb-chrysa can mirror upstream registries and act as a pull-through proxy cache.
+layerhouse can mirror upstream registries and act as a pull-through proxy cache.
 
 ## Mirror Rules
 
 Mirror rules define a relationship between a local repository prefix and an upstream
-registry. orb-chrysa periodically syncs images matching the configured strategy.
+registry. layerhouse periodically syncs images matching the configured strategy.
 
 ### Strategies
 
@@ -37,7 +37,7 @@ strategy = { type = "latest", count = 5 }
 ## Proxy Cache
 
 Proxy caches act as pull-through caches. When a client pulls an image from the local
-registry, orb-chrysa checks if it exists locally. If not, it fetches from the upstream
+registry, layerhouse checks if it exists locally. If not, it fetches from the upstream
 registry, caches it, and returns it to the client.
 
 ```toml

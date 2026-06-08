@@ -2,8 +2,8 @@
 set -euo pipefail
 
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 KANIDM_HOST_PORT="${KANIDM_HOST_PORT:-8443}"
 KANIDM_URL="${KANIDM_URL:-https://localhost:$KANIDM_HOST_PORT}"
@@ -50,7 +50,7 @@ collect_orb_logs() {
     local pod
 
     mkdir -p "$WORK/logs-$phase"
-    for pod in orb-chrysa-0 orb-chrysa-1 orb-chrysa-2; do
+    for pod in layerhouse-0 layerhouse-1 layerhouse-2; do
         kubectl -n "$NAMESPACE" logs "$pod" > "$WORK/logs-$phase/$pod-current.log" 2>&1 || true
         kubectl -n "$NAMESPACE" logs "$pod" --previous > "$WORK/logs-$phase/$pod-previous.log" 2>&1 || true
     done
@@ -98,12 +98,12 @@ need kubectl
     echo "SMOKE_IMAGE=$SMOKE_IMAGE"
 } > "$WORK/summary.env"
 
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=240s
 WORK="$WORK/node-trust" REGISTRY_ENDPOINT="$REGISTRY_ENDPOINT" ORB_NAMESPACE="$NAMESPACE" tests/k8s/tilt/kind-node-trust.sh \
     2>&1 | tee -a "$WORK/commands.log"
 
-CA="$WORK/orb-chrysa-ca.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
+CA="$WORK/layerhouse-ca.crt"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
 CI_TOKEN="$(refresh_ci_bot_token)"
 PAT="$(create_pat "$CI_TOKEN" tilt-recovery-smoke)"
 if [ -z "$PAT" ] || [ "$PAT" = "null" ]; then
@@ -121,14 +121,14 @@ kind_containerd_push "$SMOKE_IMAGE" "$PAT"
 verify_node_pull "$SMOKE_IMAGE" "$PAT"
 
 echo "=== Recovery: single pod restart rejoins membership ==="
-record kubectl -n "$NAMESPACE" delete pod orb-chrysa-1 --wait=false
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=240s
+record kubectl -n "$NAMESPACE" delete pod layerhouse-1 --wait=false
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=240s
 assert_cluster_healthy "$WORK/cluster-status-after-pod-restart.json"
 verify_node_pull "$SMOKE_IMAGE" "$PAT"
 
 echo "=== Recovery: StatefulSet restart restores from S3 snapshot ==="
-record kubectl -n "$NAMESPACE" rollout restart statefulset/orb-chrysa
-record kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=360s
+record kubectl -n "$NAMESPACE" rollout restart statefulset/layerhouse
+record kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=360s
 collect_orb_logs after-rollout-restart
 assert_snapshot_restore_evidence
 assert_cluster_healthy "$WORK/cluster-status-after-rollout-restart.json"

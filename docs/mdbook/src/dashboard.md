@@ -1,6 +1,6 @@
 # Dashboard
 
-orb-chrysa includes an embedded SolidJS SPA dashboard built with Vite+. It is compiled
+layerhouse includes an embedded SolidJS SPA dashboard built with Vite+. It is compiled
 into the binary via `rust-embed`.
 
 ## Features

@@ -1,13 +1,13 @@
 # Bring Your Own IdP
 
-orb-chrysa works with any standard OIDC identity provider. While
+layerhouse works with any standard OIDC identity provider. While
 [kanidm](https://kanidm.com) is the recommended and best-tested option,
 you can use an existing IdP — Keycloak, Okta, Azure AD, Authentik,
 Authelia, Zitadel, or any OIDC-compliant provider.
 
 ## What Your IdP Needs
 
-orb-chrysa uses standard OIDC flows. Your IdP must provide:
+layerhouse uses standard OIDC flows. Your IdP must provide:
 
 | Capability | Used For |
 |------------|----------|
@@ -26,13 +26,13 @@ Create an OAuth2 client in your IdP with:
 - **Redirect URI**: `https://registry.example.com/oauth2/callback`
 - **Scopes**: `openid profile email groups`
 
-### Step 2: Configure orb-chrysa
+### Step 2: Configure layerhouse
 
 ```toml
 [auth]
 issuer_url = "https://idp.example.com/realms/your-realm"
 issuer_internal_url = "https://keycloak.internal:8443/realms/your-realm"
-client_id = "orb-chrysa"
+client_id = "layerhouse"
 client_secret = "<your-client-secret>"
 token_endpoint_url = "https://registry.example.com/v2/token"
 redirect_uri = "https://registry.example.com/oauth2/callback"
@@ -52,7 +52,7 @@ IdP uses a different claim path, configure it:
 
 | Provider | `group_claim` | Notes |
 |----------|---------------|-------|
-| Kanidm | `"groups"` (default) | Groups are SPN-formatted (`group@domain`); orb-chrysa matches by local name |
+| Kanidm | `"groups"` (default) | Groups are SPN-formatted (`group@domain`); layerhouse matches by local name |
 | Keycloak (default) | `"groups"` | Built-in group mapper; see note below about full group paths |
 | Keycloak (realm roles) | `"realm_access.roles"` | When using realm roles instead of groups |
 | Authentik | `"groups"` | Built-in group claim |
@@ -76,7 +76,7 @@ unknown scopes. If you change `group_claim` to a path that doesn't include a
 `groups` scope, remove `groups` from the login scope list or replace it with
 the scope your IdP requires.
 
-**Access token audience** (default: uses `client_id`): orb-chrysa validates
+**Access token audience** (default: uses `client_id`): layerhouse validates
 that access tokens have `aud` matching the configured audience. Many OIDC
 providers use the client ID as the audience (the default). If your IdP uses
 a different API/resource audience, set `access_token_audience`.
@@ -102,7 +102,7 @@ access_token_audience = "https://api.example.com"
 If using realm roles instead of groups for RBAC, set `group_claim = "realm_access.roles"` and assign realm roles to users.
 
 > **Group path format**: By default, Keycloak emits group paths like `/registry_admins`.
-> orb-chrysa's permission matcher does exact string comparison against the configured
+> layerhouse's permission matcher does exact string comparison against the configured
 > group names, so `groups = ["/registry_admins"]` (with the leading slash) is required.
 > To disable full group paths in Keycloak, set the `--spi-group-full-path-enabled=false`
 > option or use a custom claim mapper that strips the path prefix.
@@ -131,7 +131,7 @@ Users inherit groups from the groups assigned to the application.
 identity_providers:
   oidc:
     clients:
-    - client_id: orb-chrysa
+    - client_id: layerhouse
       client_secret: <secret>
       redirect_uris:
         - https://registry.example.com/oauth2/callback
@@ -156,11 +156,11 @@ issuer_internal_urls = [
 ]
 ```
 
-orb-chrysa tries each URL in order and uses the first successful response.
+layerhouse tries each URL in order and uses the first successful response.
 
 ## IdP Resilience
 
-If the IdP is unreachable at startup, orb-chrysa falls back to a cached
+If the IdP is unreachable at startup, layerhouse falls back to a cached
 JWKS stored in S3 (`auth/jwks/last-good.json`). This allows pods to
 restart during IdP outages.
 

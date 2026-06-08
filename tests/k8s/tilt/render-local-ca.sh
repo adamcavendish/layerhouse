@@ -5,32 +5,32 @@ cat <<'YAML'
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: orb-chrysa-selfsigned
+  name: layerhouse-selfsigned
 spec:
   selfSigned: {}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: orb-chrysa-ca
+  name: layerhouse-ca
   namespace: cert-manager
 spec:
   isCA: true
-  commonName: Orb Chrysa Tilt CA
-  secretName: orb-chrysa-ca-secret
+  commonName: Layerhouse Tilt CA
+  secretName: layerhouse-ca-secret
   privateKey:
     algorithm: ECDSA
     size: 256
   issuerRef:
-    name: orb-chrysa-selfsigned
+    name: layerhouse-selfsigned
     kind: ClusterIssuer
     group: cert-manager.io
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: orb-chrysa-ca
+  name: layerhouse-ca
 spec:
   ca:
-    secretName: orb-chrysa-ca-secret
+    secretName: layerhouse-ca-secret
 YAML

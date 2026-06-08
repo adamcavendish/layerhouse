@@ -3,7 +3,7 @@ replicaCount: 3
 namespaceOverride: ""
 
 image:
-  repository: ghcr.io/adamcavendish/orb-chrysa-server
+  repository: ghcr.io/adamcavendish/layerhouse-server
   tag: ""
   pullPolicy: IfNotPresent
   pullSecrets: []
@@ -33,7 +33,7 @@ storage:
     bucket: ""
     region: us-east-1
     pathStyle: true
-    existingSecret: orb-chrysa-s3
+    existingSecret: layerhouse-s3
     accessKeyKey: access_key
     secretKeyKey: secret_key
     redirect:
@@ -43,12 +43,12 @@ storage:
 
 server:
   tls:
-    existingSecret: orb-chrysa-server-tls
+    existingSecret: layerhouse-server-tls
     dnsNames: []
 
 raft:
   tls:
-    existingSecret: orb-chrysa-raft-mtls
+    existingSecret: layerhouse-raft-mtls
   kubernetes:
     enabled: true
     statefulSetName: ""
@@ -61,14 +61,14 @@ auth:
   issuerInternalUrl: ""
   issuerInternalUrls: []
   jwksUrls: []
-  clientId: orb-chrysa
+  clientId: layerhouse
   tokenEndpointUrl: ""
   redirectUri: ""
   tlsInsecureSkipVerify: false
   jwksRefreshSeconds: 300
   jwksCacheS3Key: auth/jwks/last-good.json
   jwksMaxStaleSeconds: 86400
-  existingSecret: orb-chrysa-auth
+  existingSecret: layerhouse-auth
   clientSecretKey: client_secret
   tokenSigningKeysKey: token_signing_keys
   sessionEncryptionKeyKey: session_encryption_key
