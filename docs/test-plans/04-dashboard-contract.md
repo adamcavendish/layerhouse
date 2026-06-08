@@ -12,7 +12,7 @@ visual/accessibility behavior, and API conventions.
 
 ## Product Contract Summary
 
-The Orb Chrysa Container Registry dashboard is an operational console with five
+The Layerhouse Container Registry dashboard is an operational console with five
 top-level sections:
 
 ```text
@@ -71,7 +71,7 @@ styling.
 1. Load each hash route directly:
    - `#/overview`
    - `#/repos`
-   - `#/repos/platform/orb-chrysa-api`
+   - `#/repos/platform/layerhouse-api`
    - `#/mirror`
    - `#/proxy-cache`
    - `#/cluster`
@@ -198,7 +198,7 @@ styling.
 
 **Expected**:
 - Default theme is System.
-- Selected theme is stored as `orb-chrysa.theme`.
+- Selected theme is stored as `layerhouse.theme`.
 - Theme changes apply immediately without changing route or table state.
 - Light theme keeps the same operational layout, density, and workflows.
 - Light theme preserves readable contrast for page backgrounds, cards, tables,
@@ -220,7 +220,7 @@ styling.
 **Expected**:
 - Supported locales are `en`, `es`, `fr`, `de`, `zh`, `ja`, `ko`, `ar`, `pt`,
   `ru`, `it`, `nl`, `hi`, `tr`, and `vi`.
-- Selected locale is stored as `orb-chrysa.locale`.
+- Selected locale is stored as `layerhouse.locale`.
 - Dashboard strings update without full page reload.
 - Arabic sets `dir="rtl"`; all other supported locales use `ltr`.
 - RTL does not break the topbar, nav, tables, chips, row actions, modals,

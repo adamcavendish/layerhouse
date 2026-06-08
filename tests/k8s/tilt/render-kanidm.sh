@@ -20,7 +20,7 @@ metadata:
 spec:
   secretName: kanidm-tls
   issuerRef:
-    name: orb-chrysa-ca
+    name: layerhouse-ca
     kind: ClusterIssuer
     group: cert-manager.io
   dnsNames:

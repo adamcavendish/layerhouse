@@ -1,4 +1,4 @@
-# Scale-Up Test Plan — orb-chrysa
+# Scale-Up Test Plan — layerhouse
 
 **Date**: 2026-05-22
 **Type**: Test Plan
@@ -64,12 +64,12 @@ explicitly unplanned.
 
 ### U1. Standalone → 2-Voter Expansion
 
-**Precondition**: Single node (orb-chrysa-0) running with data pushed. No S3 data for node 1.
+**Precondition**: Single node (layerhouse-0) running with data pushed. No S3 data for node 1.
 
 **Steps**:
 1. Start standalone node, push test manifest
 2. Verify: `state: leader`, `voters: [{id: 1}]`
-3. Start orb-chrysa-1 (node_id=2) alongside
+3. Start layerhouse-1 (node_id=2) alongside
 4. Wait for join to complete (check logs)
 5. Check `/raft/status` on both nodes
 
@@ -88,7 +88,7 @@ explicitly unplanned.
 **Precondition**: U1 complete (2-voter cluster). No S3 data for node 2.
 
 **Steps**:
-1. With 2-voter cluster running, start orb-chrysa-2 (node_id=3)
+1. With 2-voter cluster running, start layerhouse-2 (node_id=3)
 2. Wait for join
 3. Check `/raft/status` on all nodes
 
@@ -235,7 +235,7 @@ explicitly unplanned.
 
 - `docker compose` v2
 - RustFS images available
-- orb-chrysa Docker image built
+- layerhouse Docker image built
 - Ports 5050-5052 free on host
 - `curl` and `jq` for CLI verification
 
@@ -254,8 +254,8 @@ curl -s http://localhost:5050/raft/status | jq .
 # → voters: [{id: 1}], state: leader
 
 # 4. Add node 1
-# Start orb-chrysa-1 (point to same RustFS, same config, discovery_dns resolves both)
-docker compose -f docker-compose.scale-up.yml up -d orb-chrysa-1
+# Start layerhouse-1 (point to same RustFS, same config, discovery_dns resolves both)
+docker compose -f docker-compose.scale-up.yml up -d layerhouse-1
 sleep 5
 
 # 5. Verify 2-voter cluster
@@ -265,7 +265,7 @@ curl -s http://localhost:5051/raft/status | jq '.voters'
 # → [{id: 1}, {id: 2}]
 
 # 6. Add node 2
-docker compose -f docker-compose.scale-up.yml up -d orb-chrysa-2
+docker compose -f docker-compose.scale-up.yml up -d layerhouse-2
 sleep 5
 
 # 7. Verify 3-voter cluster

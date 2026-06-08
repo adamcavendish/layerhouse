@@ -1,0 +1,21 @@
+[Unit]
+Description=layerhouse OCI container registry
+Documentation=https://github.com/adamcavendish/layerhouse
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=layerhouse
+Group=layerhouse
+ExecStart=/usr/local/bin/layerhouse-server --config /etc/layerhouse/config.toml
+ExecStop=/bin/kill -SIGTERM $MAINPID
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# Allow time for graceful Raft leave + snapshot upload before SIGKILL
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

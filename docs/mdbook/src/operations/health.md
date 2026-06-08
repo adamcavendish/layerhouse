@@ -40,7 +40,7 @@ Response:
 
 ```json
 {
-  "cluster_id": "orb-chrysa-1",
+  "cluster_id": "layerhouse-1",
   "leader_id": 1,
   "term": 7,
   "quorum": 2,
@@ -49,7 +49,7 @@ Response:
   "voters": [
     {
       "node_id": 1,
-      "address": "orb-chrysa-0.orb-chrysa-headless.orb-chrysa.svc.cluster.local:5051",
+      "address": "layerhouse-0.layerhouse-headless.layerhouse.svc.cluster.local:5051",
       "role": "leader",
       "status": "healthy",
       "commit_index": 42,
@@ -57,7 +57,7 @@ Response:
     },
     {
       "node_id": 2,
-      "address": "orb-chrysa-1.orb-chrysa-headless.orb-chrysa.svc.cluster.local:5051",
+      "address": "layerhouse-1.layerhouse-headless.layerhouse.svc.cluster.local:5051",
       "role": "voter",
       "status": "healthy",
       "commit_index": 42,
@@ -65,7 +65,7 @@ Response:
     },
     {
       "node_id": 3,
-      "address": "orb-chrysa-2.orb-chrysa-headless.orb-chrysa.svc.cluster.local:5051",
+      "address": "layerhouse-2.layerhouse-headless.layerhouse.svc.cluster.local:5051",
       "role": "voter",
       "status": "healthy",
       "commit_index": 42,

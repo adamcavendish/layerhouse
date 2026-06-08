@@ -230,7 +230,7 @@ dashboard surfaces.
 - Same proxy protocol behavior as mirror rules.
 - Proxy credentials are write-only.
 - Outbound proxy affects upstream cache misses and warm-up jobs.
-- Client pulls to orb-chrysa are not proxied by this setting.
+- Client pulls to layerhouse are not proxied by this setting.
 - HTTPS proxy is rejected with the same deferred-support validation error.
 
 ### P4. Warm Now And Pull-Through

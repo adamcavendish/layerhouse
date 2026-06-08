@@ -22,7 +22,7 @@ Returns leader ID, the numeric quorum threshold, healthy voter count, and node d
 
 ## Garbage Collection
 
-orb-chrysa uses reference-count based garbage collection:
+layerhouse uses reference-count based garbage collection:
 
 1. **Walk the Raft state machine** — identify all referenced blobs
 2. **Grace period** — blobs uploaded within the last hour are immune from GC
@@ -50,26 +50,26 @@ Available at `GET /metrics`:
 
 | Metric | Description |
 |--------|-------------|
-| `orb_chrysa_up` | Process liveness |
-| `orb_chrysa_raft_leader` | Whether this node is the Raft leader |
-| `orb_chrysa_raft_quorum` | Required healthy voters for quorum |
-| `orb_chrysa_raft_healthy_voters` | Voters caught up with the leader |
-| `orb_chrysa_gc_last_run_timestamp_seconds` | Last GC sweep timestamp |
-| `orb_chrysa_gc_last_deleted_blobs` | Blobs deleted by the last GC sweep |
-| `orb_chrysa_gc_last_delete_errors` | Delete errors from the last GC sweep |
-| `orb_chrysa_auth_jwks_keys` | Number of keys currently available for JWT validation |
-| `orb_chrysa_auth_jwks_cache_age_seconds` | Age of the current last-good JWKS material |
-| `orb_chrysa_auth_jwks_stale_cache` | Whether validation is using stale last-good JWKS material |
-| `orb_chrysa_auth_jwks_refresh_failures_total` | Total failed JWKS refresh attempts |
-| `orb_chrysa_auth_jwks_endpoint_info` | Active issuer or JWKS endpoint used by the latest successful refresh |
+| `layerhouse_up` | Process liveness |
+| `layerhouse_raft_leader` | Whether this node is the Raft leader |
+| `layerhouse_raft_quorum` | Required healthy voters for quorum |
+| `layerhouse_raft_healthy_voters` | Voters caught up with the leader |
+| `layerhouse_gc_last_run_timestamp_seconds` | Last GC sweep timestamp |
+| `layerhouse_gc_last_deleted_blobs` | Blobs deleted by the last GC sweep |
+| `layerhouse_gc_last_delete_errors` | Delete errors from the last GC sweep |
+| `layerhouse_auth_jwks_keys` | Number of keys currently available for JWT validation |
+| `layerhouse_auth_jwks_cache_age_seconds` | Age of the current last-good JWKS material |
+| `layerhouse_auth_jwks_stale_cache` | Whether validation is using stale last-good JWKS material |
+| `layerhouse_auth_jwks_refresh_failures_total` | Total failed JWKS refresh attempts |
+| `layerhouse_auth_jwks_endpoint_info` | Active issuer or JWKS endpoint used by the latest successful refresh |
 
 ### Logging
 
-Set `RUST_LOG` for verbosity. Set `ORB_CHRYSA_LOG_FORMAT=json` for JSON logs:
+Set `RUST_LOG` for verbosity. Set `LAYERHOUSE_LOG_FORMAT=json` for JSON logs:
 
 ```bash
-RUST_LOG=orb_chrysa_server=debug cargo run
-ORB_CHRYSA_LOG_FORMAT=json orb-chrysa-server --config config.toml
+RUST_LOG=layerhouse_server=debug cargo run
+LAYERHOUSE_LOG_FORMAT=json layerhouse-server --config config.toml
 ```
 
 ## Backup and Recovery

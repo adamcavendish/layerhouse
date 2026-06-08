@@ -4,7 +4,7 @@
 **Type**: Runtime product test plan
 **Source**: OCI Distribution behavior, repository browser runtime behavior,
 and local compose production workflow QA
-**Scope**: Real OCI client workflows against an orb-chrysa registry: push,
+**Scope**: Real OCI client workflows against an layerhouse registry: push,
 pull, tag listing, manifest/blob reads, range reads, dashboard/API delete
 flows, follower reads, and cleanup.
 
@@ -12,7 +12,7 @@ flows, follower reads, and cleanup.
 
 ## Product Contract Summary
 
-orb-chrysa must behave like a production OCI registry for ordinary clients.
+layerhouse must behave like a production OCI registry for ordinary clients.
 Metadata changes are committed through Raft; blob bytes are stored in S3. Real
 clients such as Docker and ORAS should be able to push and pull through the
 `/v2/*` Distribution API, while dashboard `/api/v1/*` endpoints expose enriched
@@ -22,7 +22,7 @@ repository, digest, tag, copy, and delete workflows for operators.
 
 Run these tests only against repositories under a disposable prefix such as
 `qa/oci-*`. Destructive cleanup must delete only repositories created by this
-test pass. Existing fixture repositories such as `platform/orb-chrysa-api`,
+test pass. Existing fixture repositories such as `platform/layerhouse-api`,
 `mirror/*`, and `cache/*` must not be deleted by this plan.
 
 ## Tooling
@@ -130,12 +130,12 @@ testing a different environment.
 1. Build or retag a tiny local image.
 2. Push it to `localhost:5050/qa/oci-docker:{tag}`.
 3. Remove the local tag/image reference.
-4. Pull it back from orb-chrysa.
+4. Pull it back from layerhouse.
 5. Inspect the pulled image ID and manifest digest.
 
 **Expected**:
 - Docker push succeeds using the standard blob upload and manifest PUT flow.
-- Docker pull succeeds from orb-chrysa.
+- Docker pull succeeds from layerhouse.
 - The pulled image is runnable or inspectable locally.
 - Dashboard repository APIs show the pushed repository, tag, and digest.
 
@@ -179,7 +179,7 @@ testing a different environment.
 server-side S3 I/O private and client redirects public:
 
 ```bash
-ORB_CHRYSA_CONFIG="$PWD/tests/fixtures/configs/compose/cluster-redirect.toml" \
+LAYERHOUSE_CONFIG="$PWD/tests/fixtures/configs/compose/cluster-redirect.toml" \
   docker compose -f deploy/compose/cluster.yml up -d --build
 EXPECT_BLOB_REDIRECT=1 tests/production/oci-workflow.sh
 ```
@@ -212,7 +212,7 @@ and public `storage.s3.redirect.public_endpoint = "http://localhost:9000"`.
 ### OCI13. Host Docker Trust Restart And Strict HTTPS Push
 
 **Precondition**: Tilt kind cluster is available, `localhost:32050` is the
-public NodePort endpoint, and cert-manager has issued `orb-chrysa-server-tls`.
+public NodePort endpoint, and cert-manager has issued `layerhouse-server-tls`.
 
 **Steps**:
 1. Run `KANIDM_HOST_PORT=28443 just tilt-ci-host-docker`.
@@ -339,7 +339,7 @@ tests/production/oci-workflow.sh
 ```
 
 For redirect-mode coverage, start compose with
-`ORB_CHRYSA_CONFIG="$PWD/tests/fixtures/configs/compose/cluster-redirect.toml"` and run:
+`LAYERHOUSE_CONFIG="$PWD/tests/fixtures/configs/compose/cluster-redirect.toml"` and run:
 
 ```bash
 EXPECT_BLOB_REDIRECT=1 tests/production/oci-workflow.sh
@@ -360,9 +360,9 @@ curl -fsS "http://$REG/api/v1/admin/cluster/status" \
 cd "$WORK"
 printf 'payload %s\n' "$RUN_ID" > payload.txt
 oras push --plain-http --no-tty --format json \
-  --artifact-type application/vnd.orb-chrysa.qa.v1 \
+  --artifact-type application/vnd.layerhouse.qa.v1 \
   "$REG/qa/oci-oras-${RUN_ID}:alpha,beta" \
-  "payload.txt:application/vnd.orb-chrysa.qa.payload.v1+txt"
+  "payload.txt:application/vnd.layerhouse.qa.payload.v1+txt"
 
 oras pull --plain-http --no-tty \
   "$REG/qa/oci-oras-${RUN_ID}:alpha"
@@ -389,7 +389,7 @@ curl -fsS -X DELETE \
 - GitHub Actions release workflow is enabled on the target repository.
 - Operator has permission to push tags and read GitHub Releases.
 - GHCR package visibility and permissions are configured for
-  `ghcr.io/adamcavendish/orb-chrysa-server`.
+  `ghcr.io/adamcavendish/layerhouse-server`.
 - Local dry run has passed:
 
 ```bash
@@ -418,13 +418,13 @@ gh run watch --exit-status
 gh release view "$TAG" --json tagName,name,assets,url \
   | tee "$WORK/release.json"
 
-docker pull "ghcr.io/adamcavendish/orb-chrysa-server:$TAG" \
+docker pull "ghcr.io/adamcavendish/layerhouse-server:$TAG" \
   | tee "$WORK/docker-pull-v-tag.txt"
-docker pull "ghcr.io/adamcavendish/orb-chrysa-server:$VERSION" \
+docker pull "ghcr.io/adamcavendish/layerhouse-server:$VERSION" \
   | tee "$WORK/docker-pull-plain-tag.txt"
 
 gh release download "$TAG" --dir "$WORK/assets"
-tar -xOf "$WORK/assets/orb-chrysa-$VERSION.tgz" orb-chrysa/Chart.yaml \
+tar -xOf "$WORK/assets/layerhouse-$VERSION.tgz" layerhouse/Chart.yaml \
   | tee "$WORK/chart-yaml.txt"
 grep -q "^version: $VERSION$" "$WORK/chart-yaml.txt"
 grep -q "^appVersion: $VERSION$" "$WORK/chart-yaml.txt"
@@ -434,7 +434,7 @@ grep -q "^appVersion: $VERSION$" "$WORK/chart-yaml.txt"
 
 - Release workflow completes successfully.
 - GHCR image exists with both `$TAG` and `$VERSION` tags.
-- GitHub Release contains CLI binaries and `orb-chrysa-$VERSION.tgz`.
+- GitHub Release contains CLI binaries and `layerhouse-$VERSION.tgz`.
 - Chart archive metadata has `version: $VERSION` and `appVersion: $VERSION`.
 - Rendering the chart without `image.tag` uses `$VERSION`; explicit
   `image.tag` override still works.

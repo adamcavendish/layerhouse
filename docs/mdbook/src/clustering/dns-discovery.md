@@ -1,6 +1,6 @@
 # DNS Discovery
 
-Orb Chrysa uses DNS-based peer discovery instead of a static peer list. All nodes
+Layerhouse uses DNS-based peer discovery instead of a static peer list. All nodes
 resolve the configured `discovery_dns` name and discover peers dynamically.
 
 ## How It Works
@@ -15,21 +15,21 @@ resolve the configured `discovery_dns` name and discover peers dynamically.
 
 ```yaml
 services:
-  orb-chrysa-0:
-    hostname: orb-chrysa-0
+  layerhouse-0:
+    hostname: layerhouse-0
     networks:
       default:
         aliases:
-          - orb-chrysa
-  orb-chrysa-1:
-    hostname: orb-chrysa-1
+          - layerhouse
+  layerhouse-1:
+    hostname: layerhouse-1
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 ```
 
-The `orb-chrysa` network alias resolves to all nodes' IPs. `discovery_dns = "orb-chrysa"`
+The `layerhouse` network alias resolves to all nodes' IPs. `discovery_dns = "layerhouse"`
 uses Docker's built-in DNS.
 
 ## Kubernetes
@@ -38,17 +38,17 @@ uses Docker's built-in DNS.
 apiVersion: v1
 kind: Service
 metadata:
-  name: orb-chrysa
+  name: layerhouse
 spec:
   clusterIP: None
   selector:
-    app: orb-chrysa
+    app: layerhouse
   ports:
   - port: 5051
     name: raft
 ```
 
-The headless service `orb-chrysa` returns all pod IPs. `discovery_dns = "orb-chrysa"`
+The headless service `layerhouse` returns all pod IPs. `discovery_dns = "layerhouse"`
 uses Kubernetes DNS.
 
 ## Node Identity
@@ -57,8 +57,8 @@ Node ID is derived from the hostname suffix:
 
 | Hostname | Ordinal | Node ID |
 |----------|---------|---------|
-| `orb-chrysa-0` | 0 | 1 |
-| `orb-chrysa-1` | 1 | 2 |
-| `orb-chrysa-2` | 2 | 3 |
+| `layerhouse-0` | 0 | 1 |
+| `layerhouse-1` | 1 | 2 |
+| `layerhouse-2` | 2 | 3 |
 
 Ordinal 0 bootstraps the cluster if no existing cluster is found.

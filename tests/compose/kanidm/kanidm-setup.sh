@@ -61,8 +61,8 @@ AUTH="Authorization: Bearer $BEARER"
 
 echo "=== Creating users ==="
 for USER_INFO in \
-  "admin|Admin User|admin@orb-chrysa.local" \
-  "developer|Developer User|developer@orb-chrysa.local"; do
+  "admin|Admin User|admin@layerhouse.local" \
+  "developer|Developer User|developer@layerhouse.local"; do
   NAME=$(echo "$USER_INFO" | cut -d'|' -f1)
   DISPLAY=$(echo "$USER_INFO" | cut -d'|' -f2)
   EMAIL=$(echo "$USER_INFO" | cut -d'|' -f3)
@@ -96,7 +96,7 @@ done
 echo "=== Generating API token for ci-bot ==="
 API_TOKEN_RESP=$($CURL -f -H "$AUTH" \
   -H "Content-Type: application/json" \
-  -d '{"label":"orb-chrysa-ci"}' \
+  -d '{"label":"layerhouse-ci"}' \
   "$KANIDM_URL/v1/service_account/ci-bot/_api_token" 2>&1 || true)
 
 CI_TOKEN=$(echo "$API_TOKEN_RESP" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
@@ -143,12 +143,12 @@ OAUTH2_REDIRECT_URL="http://localhost:5050/oauth2/callback"
 OAUTH2_LANDING_URL="http://localhost:5050"
 $CURL -f -H "$AUTH" \
   -H "Content-Type: application/json" \
-  -d "{\"attrs\":{\"name\":[\"orb-chrysa\"],\"displayname\":[\"Orb Chrysa Container Registry\"],\"oauth2_rs_origin\":[\"$OAUTH2_REDIRECT_URL\"],\"oauth2_rs_origin_landing\":[\"$OAUTH2_LANDING_URL\"]}}" \
+  -d "{\"attrs\":{\"name\":[\"layerhouse\"],\"displayname\":[\"Layerhouse Container Registry\"],\"oauth2_rs_origin\":[\"$OAUTH2_REDIRECT_URL\"],\"oauth2_rs_origin_landing\":[\"$OAUTH2_LANDING_URL\"]}}" \
   "$KANIDM_URL/v1/oauth2/_basic" >/dev/null 2>&1 || echo "  (oauth2 client may exist)"
-echo "  orb-chrysa client created"
+echo "  layerhouse client created"
 
 echo "=== Verifying OAuth2 redirect/landing mapping ==="
-OAUTH2_GET_RESP=$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/orb-chrysa" 2>/dev/null || true)
+OAUTH2_GET_RESP=$($CURL -f -H "$AUTH" "$KANIDM_URL/v1/oauth2/layerhouse" 2>/dev/null || true)
 echo "  $(echo "$OAUTH2_GET_RESP" | grep -o '"oauth2_rs_origin":\[[^]]*\]' | head -1)"
 echo "  $(echo "$OAUTH2_GET_RESP" | grep -o '"oauth2_rs_origin_landing":\[[^]]*\]' | head -1)"
 # Landing is the bare root, so the callback URL can only appear in oauth2_rs_origin.
@@ -163,18 +163,18 @@ echo "=== Configuring scopemaps ==="
 $CURL -f -H "$AUTH" \
   -H "Content-Type: application/json" \
   -d '["openid","profile","email","oci_admin"]' \
-  "$KANIDM_URL/v1/oauth2/orb-chrysa/_scopemap/registry_admins" -X POST >/dev/null 2>&1 || true
+  "$KANIDM_URL/v1/oauth2/layerhouse/_scopemap/registry_admins" -X POST >/dev/null 2>&1 || true
 echo "  registry_admins -> openid, profile, email, oci_admin"
 
 $CURL -f -H "$AUTH" \
   -H "Content-Type: application/json" \
   -d '["openid","profile","email","oci_push","oci_pull"]' \
-  "$KANIDM_URL/v1/oauth2/orb-chrysa/_scopemap/registry_developers" -X POST >/dev/null 2>&1 || true
+  "$KANIDM_URL/v1/oauth2/layerhouse/_scopemap/registry_developers" -X POST >/dev/null 2>&1 || true
 echo "  registry_developers -> openid, profile, email, oci_push, oci_pull"
 
 echo "=== Getting client secret ==="
 SECRET_RESP=$($CURL -f -H "$AUTH" \
-  "$KANIDM_URL/v1/oauth2/orb-chrysa/_basic_secret" 2>&1 || true)
+  "$KANIDM_URL/v1/oauth2/layerhouse/_basic_secret" 2>&1 || true)
 CLIENT_SECRET=$(echo "$SECRET_RESP" | tr -d '"' | tr -d '\n')
 
 if [ -z "$CLIENT_SECRET" ] || [ "$CLIENT_SECRET" = "null" ]; then
@@ -189,7 +189,7 @@ SIGNING_KEY_B64=$(head -c 32 /dev/urandom | base64 | tr -d '\n')
 
 ENCRYPTION_KEY_B64=$(head -c 32 /dev/urandom | base64 | tr -d '\n')
 
-echo "=== Writing orb-chrysa auth config ==="
+echo "=== Writing layerhouse auth config ==="
 sed_escape() {
   printf '%s' "$1" | sed 's/[\/&]/\\&/g'
 }

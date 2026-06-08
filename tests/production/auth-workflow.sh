@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# orb-chrysa Auth Smoke Test
+# layerhouse Auth Smoke Test
 # Runs against a docker compose auth cluster at localhost:5050
 #
 # Requires: docker, curl, jq, oras
@@ -62,7 +62,7 @@ cleanup() {
 }
 
 mkdir -p "$EVIDENCE_ROOT"
-echo "=== orb-chrysa Auth Smoke Test ==="
+echo "=== layerhouse Auth Smoke Test ==="
 echo "Registry: $REGISTRY"
 echo "Run ID:   $RUN_ID"
 echo
@@ -105,7 +105,7 @@ echo "--- PAT Flow ---"
 # We use the admin user which is in registry_admins group.
 # For now, we check if we can reach the token endpoint.
 TOKEN_RESP=$(curl -s -o "$EVIDENCE_ROOT/token-noauth.json" -w "%{http_code}" \
-    "$SCHEME://$REGISTRY/v2/token?service=orb-chrysa&scope=repository:$REPO_PREFIX/*:push")
+    "$SCHEME://$REGISTRY/v2/token?service=layerhouse&scope=repository:$REPO_PREFIX/*:push")
 if [ "$TOKEN_RESP" -eq 401 ]; then
     pass AUTH-TK1 "token endpoint returns 401 without credentials"
 else

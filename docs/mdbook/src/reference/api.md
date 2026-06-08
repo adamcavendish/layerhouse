@@ -1,6 +1,6 @@
 # API Reference
 
-Orb Chrysa implements the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec)
+Layerhouse implements the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec)
 plus additional admin and dashboard APIs.
 
 ## OCI Distribution API (`/v2/`)

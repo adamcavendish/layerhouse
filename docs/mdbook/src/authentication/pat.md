@@ -1,7 +1,7 @@
 # Personal Access Tokens
 
 Personal Access Tokens (PATs) are the primary way human users authenticate with
-Orb Chrysa for `docker login`.
+Layerhouse for `docker login`.
 
 ## Creating a PAT
 
@@ -11,14 +11,14 @@ PATs are created through the dashboard or API:
 # Via the API
 curl -X POST http://localhost:5050/api/v1/tokens \
   -H "Content-Type: application/json" \
-  -H "Cookie: orb_chrysa_session=<session>" \
+  -H "Cookie: layerhouse_session=<session>" \
   -d '{"name": "my-laptop", "scopes": ["repository:dev/*:push", "repository:dev/*:pull"]}'
 
 # Response (token shown only once)
 {
   "id": "a1b2c3d4-...",
   "name": "my-laptop",
-  "token": "orbchrysa-abcdef1234567890abcdef1234567890",
+  "token": "layerhouse-abcdef1234567890abcdef1234567890",
   "scopes": ["repository:dev/*:push", "repository:dev/*:pull"],
   "created_at": 1716854400,
   "expires_at": null
@@ -28,13 +28,13 @@ curl -X POST http://localhost:5050/api/v1/tokens \
 ## Using a PAT
 
 ```bash
-echo "orbchrysa-abcdef1234567890abcdef1234567890" | \
+echo "layerhouse-abcdef1234567890abcdef1234567890" | \
   docker login localhost:5050 --username developer --password-stdin
 ```
 
 ## PAT Format
 
-- Prefix: `orbchrysa-`
+- Prefix: `layerhouse-`
 - Random component: 32 hex characters (16 bytes)
 - Stored as SHA-256 hash in Raft state machine
 - Only the first 12 characters are shown in listings (for identification)
@@ -44,11 +44,11 @@ echo "orbchrysa-abcdef1234567890abcdef1234567890" | \
 ```bash
 # List your PATs
 curl http://localhost:5050/api/v1/tokens \
-  -H "Cookie: orb_chrysa_session=<session>"
+  -H "Cookie: layerhouse_session=<session>"
 
 # Revoke a PAT
 curl -X DELETE http://localhost:5050/api/v1/tokens/a1b2c3d4-... \
-  -H "Cookie: orb_chrysa_session=<session>"
+  -H "Cookie: layerhouse_session=<session>"
 ```
 
 ## Scopes

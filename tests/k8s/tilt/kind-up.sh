@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
 CONTEXT="kind-$CLUSTER"
 REGISTRY_NODE_PORT="${REGISTRY_NODE_PORT:-32050}"
 KANIDM_NODE_PORT="${KANIDM_NODE_PORT:-30443}"
@@ -107,17 +107,17 @@ if [ "$LOAD_FIXTURE_IMAGES" = "1" ]; then
             echo "WARN: continuing without preloaded optional smoke base image: $image" >&2
         fi
     done
-    rustfs_namespace="${RUSTFS_NAMESPACE:-orb-chrysa-tilt-s3}"
-    orb_namespace="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+    rustfs_namespace="${RUSTFS_NAMESPACE:-layerhouse-tilt-s3}"
+    orb_namespace="${ORB_NAMESPACE:-layerhouse-tilt}"
     kubectl -n "$rustfs_namespace" delete job rustfs-init --ignore-not-found --wait=false 2>/dev/null || true
     kubectl -n "$rustfs_namespace" delete pod -l app=rustfs --ignore-not-found --wait=false 2>/dev/null || true
     kubectl -n "${KANIDM_NAMESPACE:-kanidm}" delete pod -l app=kanidm --ignore-not-found --wait=false 2>/dev/null || true
-    kubectl -n "$orb_namespace" delete statefulset orb-chrysa --ignore-not-found --cascade=foreground --wait=true 2>/dev/null || true
-    kubectl -n "$orb_namespace" delete pod -l app.kubernetes.io/name=orb-chrysa --ignore-not-found --wait=true 2>/dev/null || true
+    kubectl -n "$orb_namespace" delete statefulset layerhouse --ignore-not-found --cascade=foreground --wait=true 2>/dev/null || true
+    kubectl -n "$orb_namespace" delete pod -l app.kubernetes.io/name=layerhouse --ignore-not-found --wait=true 2>/dev/null || true
 fi
 
 if [ "${LOAD_TILT_APP_IMAGE:-0}" = "1" ]; then
-    app_image="${ORB_CHRYSA_TILT_IMAGE:-orb-chrysa-server:tilt}"
+    app_image="${LAYERHOUSE_TILT_IMAGE:-layerhouse-server:tilt}"
     echo "Loading Tilt app image into kind: $app_image"
     if ! docker image inspect "$app_image" >/dev/null 2>&1; then
         echo "ERROR: local Tilt app image not found: $app_image" >&2

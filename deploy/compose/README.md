@@ -1,12 +1,12 @@
 # Docker Compose Deployment
 
-Production multi-replica orb-chrysa with RustFS for local S3-compatible storage.
+Production multi-replica layerhouse with RustFS for local S3-compatible storage.
 
 ## Files
 
 | File | Description |
 |---|---|
-| `standalone.yml` | Single orb-chrysa node + RustFS |
+| `standalone.yml` | Single layerhouse node + RustFS |
 | `cluster.yml` | Three-node Raft cluster + RustFS |
 | `config/standalone.toml` | Config for standalone mode |
 | `config/cluster.toml` | Config for cluster mode |
@@ -23,13 +23,13 @@ docker compose -f deploy/compose/cluster.yml up -d
 
 ## Rolling updates
 
-Named services (`orb-chrysa-0`, `orb-chrysa-1`, `orb-chrysa-2`) allow
+Named services (`layerhouse-0`, `layerhouse-1`, `layerhouse-2`) allow
 rolling restarts without downtime:
 
 ```bash
-docker compose -f deploy/compose/cluster.yml up -d --no-deps orb-chrysa-0
-docker compose -f deploy/compose/cluster.yml up -d --no-deps orb-chrysa-1
-docker compose -f deploy/compose/cluster.yml up -d --no-deps orb-chrysa-2
+docker compose -f deploy/compose/cluster.yml up -d --no-deps layerhouse-0
+docker compose -f deploy/compose/cluster.yml up -d --no-deps layerhouse-1
+docker compose -f deploy/compose/cluster.yml up -d --no-deps layerhouse-2
 ```
 
 Each node gracefully leaves the Raft cluster on shutdown (uploads snapshot,

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAMESPACE="${RUSTFS_NAMESPACE:-orb-chrysa-tilt-s3}"
-BUCKET="${S3_BUCKET:-orb-chrysa}"
+NAMESPACE="${RUSTFS_NAMESPACE:-layerhouse-tilt-s3}"
+BUCKET="${S3_BUCKET:-layerhouse}"
 ACCESS_KEY="${S3_ACCESS_KEY:-rustfsadmin}"
 SECRET_KEY="${S3_SECRET_KEY:-rustfsadmin}"
 RUSTFS_IMAGE="${RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-beta.2}"

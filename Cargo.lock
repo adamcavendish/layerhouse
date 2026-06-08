@@ -2753,6 +2753,76 @@ dependencies = [
 ]
 
 [[package]]
+name = "layerhouse-ctl"
+version = "0.0.1"
+dependencies = [
+ "aioduct",
+ "base64 0.22.1",
+ "bytes",
+ "clap",
+ "futures",
+ "http 1.4.0",
+ "rcgen",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "layerhouse-server"
+version = "0.0.1"
+dependencies = [
+ "aes-gcm",
+ "aioduct",
+ "async-trait",
+ "aws-config",
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "aws-types",
+ "axum",
+ "axum-server",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "futures",
+ "hex",
+ "http 1.4.0",
+ "http-body-util",
+ "httpmock",
+ "hyper 1.9.0",
+ "jsonwebtoken",
+ "openraft",
+ "postcard",
+ "prost",
+ "rand 0.10.1",
+ "rcgen",
+ "redb",
+ "rust-embed",
+ "rustls 0.23.40",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-util",
+ "toml",
+ "tonic",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3054,76 +3124,6 @@ name = "openssl-probe"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
-
-[[package]]
-name = "orb-chrysa-cli"
-version = "0.0.1"
-dependencies = [
- "aioduct",
- "base64 0.22.1",
- "bytes",
- "clap",
- "futures",
- "http 1.4.0",
- "rcgen",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "orb-chrysa-server"
-version = "0.0.1"
-dependencies = [
- "aes-gcm",
- "aioduct",
- "async-trait",
- "aws-config",
- "aws-credential-types",
- "aws-sdk-s3",
- "aws-types",
- "axum",
- "axum-server",
- "base64 0.22.1",
- "bytes",
- "chrono",
- "futures",
- "hex",
- "http 1.4.0",
- "http-body-util",
- "httpmock",
- "hyper 1.9.0",
- "jsonwebtoken",
- "openraft",
- "postcard",
- "prost",
- "rand 0.10.1",
- "rcgen",
- "redb",
- "rust-embed",
- "rustls 0.23.40",
- "rustls-pemfile",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sha2 0.11.0",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-util",
- "toml",
- "tonic",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "walkdir",
-]
 
 [[package]]
 name = "outref"

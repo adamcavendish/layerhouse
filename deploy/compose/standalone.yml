@@ -1,12 +1,12 @@
-# Production Docker Compose — single-node orb-chrysa with RustFS.
+# Production Docker Compose — single-node layerhouse with RustFS.
 #
 # Prerequisites:
 #   docker compose -f deploy/compose/standalone.yml up -d
 #
 # This file uses :latest tags. Pin to a specific version for production:
-#   ghcr.io/adamcavendish/orb-chrysa-server:v0.1.0
+#   ghcr.io/adamcavendish/layerhouse-server:v0.1.0
 
-name: orb-chrysa-standalone
+name: layerhouse-standalone
 
 services:
   rustfs:
@@ -15,7 +15,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-orb-chrysa}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-layerhouse}
       RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-change-me-in-production}
       RUSTFS_ADDRESS: "0.0.0.0:9000"
       RUSTFS_CONSOLE_ADDRESS: "0.0.0.0:9001"
@@ -36,30 +36,30 @@ services:
         condition: service_healthy
     environment:
       RUSTFS_ENDPOINT: http://rustfs:9000
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-orb-chrysa}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-layerhouse}
       RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-change-me-in-production}
     entrypoint: >
       /bin/sh -c "
       RUSTFS_IP=$$(getent hosts rustfs | awk '{print $$1}');
       rc alias set local http://$$RUSTFS_IP:9000 $$RUSTFS_ACCESS_KEY $$RUSTFS_SECRET_KEY;
-      rc bucket create local/orb-chrysa -p;
+      rc bucket create local/layerhouse -p;
       "
 
-  orb-chrysa-0:
-    image: ghcr.io/adamcavendish/orb-chrysa-server:latest
-    hostname: orb-chrysa-0
+  layerhouse-0:
+    image: ghcr.io/adamcavendish/layerhouse-server:latest
+    hostname: layerhouse-0
     ports:
       - "5050:5050"
     volumes:
-      - ./config/standalone.toml:/etc/orb-chrysa/config.toml:ro
-    command: ["--config", "/etc/orb-chrysa/config.toml"]
+      - ./config/standalone.toml:/etc/layerhouse/config.toml:ro
+    command: ["--config", "/etc/layerhouse/config.toml"]
     depends_on:
       rustfs-init:
         condition: service_completed_successfully
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
 volumes:
   rustfs-data:

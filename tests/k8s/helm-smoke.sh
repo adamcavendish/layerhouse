@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Opt-in Kubernetes Helm production smoke for Orb Chrysa.
+# Opt-in Kubernetes Helm production smoke for Layerhouse.
 #
 # Required env:
 #   REGISTRY_ENDPOINT=registry.example.internal:32000
@@ -7,10 +7,10 @@
 # Optional env:
 #   RUN_ID, NAMESPACE, S3_NAMESPACE, SERVER_IMAGE_REPOSITORY, SERVER_IMAGE_TAG
 #   NODE_TRUST_COMMAND: command invoked after cert generation to install
-#     containerd trust on test nodes. It receives ORB_CHRYSA_CA and
-#     ORB_CHRYSA_CONTAINERD_HOSTS env vars.
+#     containerd trust on test nodes. It receives LAYERHOUSE_CA and
+#     LAYERHOUSE_CONTAINERD_HOSTS env vars.
 #   CRICTL_COMMAND: command used to pull the pushed smoke image from a node.
-#   DOCKER_TRUST_COMMAND: optional command to trust ORB_CHRYSA_CA in the local
+#   DOCKER_TRUST_COMMAND: optional command to trust LAYERHOUSE_CA in the local
 #     Docker daemon before pushing the smoke image.
 set -euo pipefail
 
@@ -23,16 +23,16 @@ if [ "$REGISTRY_PORT" = "$REGISTRY_ENDPOINT" ]; then
     REGISTRY_PORT=443
     REGISTRY_PORT_EXPLICIT=0
 fi
-NAMESPACE="${NAMESPACE:-orb-chrysa-smoke-$RUN_ID}"
+NAMESPACE="${NAMESPACE:-layerhouse-smoke-$RUN_ID}"
 S3_NAMESPACE="${S3_NAMESPACE:-$NAMESPACE-s3}"
-RELEASE="${RELEASE:-orb-chrysa}"
+RELEASE="${RELEASE:-layerhouse}"
 CHART="${CHART:-deploy/kubernetes/helm}"
 
 chart_app_version() {
     awk -F: '/^appVersion:/ { gsub(/[ "]/, "", $2); print $2; exit }' "$CHART/Chart.yaml"
 }
 
-SERVER_IMAGE_REPOSITORY="${SERVER_IMAGE_REPOSITORY:-ghcr.io/adamcavendish/orb-chrysa-server}"
+SERVER_IMAGE_REPOSITORY="${SERVER_IMAGE_REPOSITORY:-ghcr.io/adamcavendish/layerhouse-server}"
 SERVER_IMAGE_TAG="${SERVER_IMAGE_TAG:-$(chart_app_version)}"
 if [ -z "$SERVER_IMAGE_TAG" ]; then
     echo "ERROR: unable to resolve SERVER_IMAGE_TAG from $CHART/Chart.yaml" >&2
@@ -44,7 +44,7 @@ else
     SERVICE_TYPE="${SERVICE_TYPE:-LoadBalancer}"
 fi
 SERVICE_NODE_PORT="${SERVICE_NODE_PORT:-$REGISTRY_PORT}"
-S3_BUCKET="${S3_BUCKET:-orb-chrysa}"
+S3_BUCKET="${S3_BUCKET:-layerhouse}"
 S3_ACCESS_KEY="${S3_ACCESS_KEY:-rustfsadmin}"
 S3_SECRET_KEY="${S3_SECRET_KEY:-rustfsadmin}"
 EVIDENCE_ROOT="${EVIDENCE_ROOT:-/tmp}"
@@ -85,7 +85,7 @@ need curl
 need jq
 
 umask 077
-mkdir -p "$WORK/dockerctx" "$WORK/orb-chrysa-airgap"
+mkdir -p "$WORK/dockerctx" "$WORK/layerhouse-airgap"
 chmod -R go-rwx "$WORK"
 cat > "$WORK/summary.env" <<EOF
 RUN_ID=$RUN_ID
@@ -214,7 +214,7 @@ YAML
 record kubectl -n "$S3_NAMESPACE" wait --for=condition=complete "job/rustfs-init-$RUN_ID" --timeout=120s
 
 log "Generate air-gapped certs and Helm values"
-record cargo run -q -p orb-chrysa-cli -- air-gapped cert init \
+record cargo run -q -p layerhouse-ctl -- air-gapped cert init \
     --registry-host "$REGISTRY_HOST" \
     --san "$RELEASE.$NAMESPACE.svc" \
     --san "$RELEASE.$NAMESPACE.svc.cluster.local" \
@@ -222,27 +222,27 @@ record cargo run -q -p orb-chrysa-cli -- air-gapped cert init \
     --statefulset-name "$RELEASE" \
     --headless-service "$RELEASE-headless" \
     --replicas 3 \
-    --out "$WORK/orb-chrysa-airgap" \
+    --out "$WORK/layerhouse-airgap" \
     --overwrite
-record cargo run -q -p orb-chrysa-cli -- air-gapped k8s bundle-generate \
+record cargo run -q -p layerhouse-ctl -- air-gapped k8s bundle-generate \
     --registry-endpoint "$REGISTRY_ENDPOINT" \
-    --cert-dir "$WORK/orb-chrysa-airgap/certs" \
+    --cert-dir "$WORK/layerhouse-airgap/certs" \
     --namespace "$NAMESPACE" \
     --image-repository "$SERVER_IMAGE_REPOSITORY" \
     --image-tag "$SERVER_IMAGE_TAG" \
-    --out "$WORK/orb-chrysa-airgap" \
+    --out "$WORK/layerhouse-airgap" \
     --overwrite
 
 log "Install node trust"
-export ORB_CHRYSA_CA="$WORK/orb-chrysa-airgap/containerd/ca.crt"
-export ORB_CHRYSA_CONTAINERD_HOSTS="$WORK/orb-chrysa-airgap/containerd/hosts.toml"
+export LAYERHOUSE_CA="$WORK/layerhouse-airgap/containerd/ca.crt"
+export LAYERHOUSE_CONTAINERD_HOSTS="$WORK/layerhouse-airgap/containerd/hosts.toml"
 if [ -z "$NODE_TRUST_COMMAND" ]; then
-    echo "ERROR: set NODE_TRUST_COMMAND to install ORB_CHRYSA_CA and ORB_CHRYSA_CONTAINERD_HOSTS on test nodes" >&2
+    echo "ERROR: set NODE_TRUST_COMMAND to install LAYERHOUSE_CA and LAYERHOUSE_CONTAINERD_HOSTS on test nodes" >&2
     exit 2
 fi
 record bash -ec "$NODE_TRUST_COMMAND"
 
-log "Install Orb Chrysa Helm chart"
+log "Install Layerhouse Helm chart"
 HELM_SERVICE_ARGS=(--set "service.type=$SERVICE_TYPE")
 if [ "$SERVICE_TYPE" = "NodePort" ]; then
     if ! [[ "$SERVICE_NODE_PORT" =~ ^[0-9]+$ ]]; then
@@ -256,27 +256,27 @@ if [ "$SERVICE_TYPE" = "NodePort" ]; then
     HELM_SERVICE_ARGS+=(--set "service.nodePort=$SERVICE_NODE_PORT")
 fi
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n "$NAMESPACE" create secret generic orb-chrysa-s3 \
+kubectl -n "$NAMESPACE" create secret generic layerhouse-s3 \
     --from-literal=access_key="$S3_ACCESS_KEY" \
     --from-literal=secret_key="$S3_SECRET_KEY" \
     --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -f "$WORK/orb-chrysa-airgap/k8s/server-tls-secret.yaml"
-kubectl apply -f "$WORK/orb-chrysa-airgap/k8s/raft-mtls-secret.yaml"
+kubectl apply -f "$WORK/layerhouse-airgap/k8s/server-tls-secret.yaml"
+kubectl apply -f "$WORK/layerhouse-airgap/k8s/raft-mtls-secret.yaml"
 record helm upgrade --install "$RELEASE" "$CHART" \
     --namespace "$NAMESPACE" \
     --create-namespace \
-    -f "$WORK/orb-chrysa-airgap/helm/values-air-gapped.yaml" \
+    -f "$WORK/layerhouse-airgap/helm/values-air-gapped.yaml" \
     "${HELM_SERVICE_ARGS[@]}" \
     --set "image.repository=$SERVER_IMAGE_REPOSITORY" \
     --set "image.tag=$SERVER_IMAGE_TAG" \
     --set "storage.s3.endpoint=http://rustfs.$S3_NAMESPACE.svc.cluster.local:9000" \
     --set "storage.s3.bucket=$S3_BUCKET"
 record kubectl -n "$NAMESPACE" rollout status "statefulset/$RELEASE" --timeout=300s
-kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/orb-chrysa-pods.txt"
+kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/layerhouse-pods.txt"
 
 log "Verify public readiness and cluster status"
-curl --cacert "$ORB_CHRYSA_CA" -fsS "https://$REGISTRY_ENDPOINT/readyz" | tee "$WORK/readyz.txt"
-curl --cacert "$ORB_CHRYSA_CA" -fsS "https://$REGISTRY_ENDPOINT/api/v1/admin/cluster/status" \
+curl --cacert "$LAYERHOUSE_CA" -fsS "https://$REGISTRY_ENDPOINT/readyz" | tee "$WORK/readyz.txt"
+curl --cacert "$LAYERHOUSE_CA" -fsS "https://$REGISTRY_ENDPOINT/api/v1/admin/cluster/status" \
     | tee "$WORK/cluster-status.json" \
     | jq '{leader_id, quorum, healthy_voters}'
 jq -e '.leader_id != null and .healthy_voters >= .quorum' "$WORK/cluster-status.json" >/dev/null
@@ -286,7 +286,7 @@ if [ -n "$DOCKER_TRUST_COMMAND" ]; then
     record bash -ec "$DOCKER_TRUST_COMMAND"
 fi
 BASE_IMAGE="$(resolve_smoke_base_image)"
-printf 'hello from orb-chrysa k8s smoke %s\n' "$RUN_ID" > "$WORK/dockerctx/hello.txt"
+printf 'hello from layerhouse k8s smoke %s\n' "$RUN_ID" > "$WORK/dockerctx/hello.txt"
 printf 'FROM %s\nCOPY hello.txt /hello.txt\n' "$BASE_IMAGE" > "$WORK/dockerctx/Dockerfile"
 record docker build -t "$SMOKE_IMAGE" "$WORK/dockerctx"
 record docker push "$SMOKE_IMAGE"
@@ -294,7 +294,7 @@ record docker push "$SMOKE_IMAGE"
 log "Pull smoke image from a Kubernetes node with crictl"
 record bash -ec "$CRICTL_COMMAND pull '$SMOKE_IMAGE'"
 
-log "Run smoke image from Orb Chrysa source"
+log "Run smoke image from Layerhouse source"
 record kubectl -n "$NAMESPACE" run "orb-smoke-$RUN_ID" \
     --image="$SMOKE_IMAGE" \
     --restart=Never \

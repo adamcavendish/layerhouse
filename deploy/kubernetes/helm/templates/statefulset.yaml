@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "orb-chrysa.fullname" . }}
-  namespace: {{ include "orb-chrysa.namespace" . }}
+  name: {{ include "layerhouse.fullname" . }}
+  namespace: {{ include "layerhouse.namespace" . }}
   labels:
-    {{- include "orb-chrysa.labels" . | nindent 4 }}
+    {{- include "layerhouse.labels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "orb-chrysa.fullname" . }}-headless
+  serviceName: {{ include "layerhouse.fullname" . }}-headless
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+      app.kubernetes.io/name: {{ include "layerhouse.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "orb-chrysa.name" . }}
+        app.kubernetes.io/name: {{ include "layerhouse.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "orb-chrysa.serviceAccountName" . }}
+      serviceAccountName: {{ include "layerhouse.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
@@ -37,14 +37,14 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: orb-chrysa
+        - name: layerhouse
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/bin/sh", "-ec"]
           args:
             - |
               umask 077
-              mkdir -p /tmp/orb-chrysa
+              mkdir -p /tmp/layerhouse
               escape_sed() {
                 printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'
               }
@@ -63,8 +63,8 @@ spec:
                 -e "s|__AUTH_TOKEN_SIGNING_KEYS__|${AUTH_TOKEN_SIGNING_KEYS_ESC}|g" \
                 -e "s|__AUTH_SESSION_ENCRYPTION_KEY__|${AUTH_SESSION_ENCRYPTION_KEY_ESC}|g" \
                 {{- end }}
-                /etc/orb-chrysa/config/config.toml.tpl > /tmp/orb-chrysa/config.toml
-              exec orb-chrysa-server --config /tmp/orb-chrysa/config.toml
+                /etc/layerhouse/config/config.toml.tpl > /tmp/layerhouse/config.toml
+              exec layerhouse-server --config /tmp/layerhouse/config.toml
           env:
             - name: POD_NAME
               valueFrom:
@@ -72,13 +72,13 @@ spec:
                   fieldPath: metadata.name
             - name: HOSTNAME
               value: "$(POD_NAME)"
-            - name: ORB_CHRYSA_RAFT_ADVERTISE_HOST
-              value: "$(POD_NAME).{{ include "orb-chrysa.fullname" . }}-headless.{{ include "orb-chrysa.namespace" . }}.svc.cluster.local"
+            - name: LAYERHOUSE_RAFT_ADVERTISE_HOST
+              value: "$(POD_NAME).{{ include "layerhouse.fullname" . }}-headless.{{ include "layerhouse.namespace" . }}.svc.cluster.local"
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: ORB_CHRYSA_LOG_FORMAT
+            - name: LAYERHOUSE_LOG_FORMAT
               value: {{ .Values.logging.format | quote }}
             - name: S3_ACCESS_KEY
               valueFrom:
@@ -143,17 +143,17 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: generated-config
-              mountPath: /tmp/orb-chrysa
+              mountPath: /tmp/layerhouse
             - name: raft-data
               mountPath: /tmp/raft
             - name: config
-              mountPath: /etc/orb-chrysa/config
+              mountPath: /etc/layerhouse/config
               readOnly: true
             - name: server-tls
-              mountPath: /etc/orb-chrysa/tls
+              mountPath: /etc/layerhouse/tls
               readOnly: true
             - name: raft-tls
-              mountPath: /etc/orb-chrysa/raft-tls
+              mountPath: /etc/layerhouse/raft-tls
               readOnly: true
       volumes:
         - name: generated-config
@@ -162,7 +162,7 @@ spec:
           emptyDir: {}
         - name: config
           configMap:
-            name: {{ include "orb-chrysa.fullname" . }}-config
+            name: {{ include "layerhouse.fullname" . }}-config
         - name: server-tls
           secret:
             secretName: {{ .Values.server.tls.existingSecret }}

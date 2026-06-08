@@ -1,6 +1,6 @@
 # Air-Gapped Kubernetes
 
-Orb Chrysa behaves like a normal OCI registry in Kubernetes. Workloads can pull
+Layerhouse behaves like a normal OCI registry in Kubernetes. Workloads can pull
 images from it after the node container runtime trusts the registry certificate.
 `imagePullSecrets` only handle authentication; TLS trust is configured on every
 node.
@@ -18,13 +18,13 @@ The beta production path is Helm-first:
 Use the CLI from an operator workstation:
 
 ```bash
-orb-chrysa-cli air-gapped cert init \
+layerhouse-ctl air-gapped cert init \
   --registry-host registry.internal.example.com \
-  --namespace orb-chrysa \
-  --statefulset-name orb-chrysa \
-  --headless-service orb-chrysa-headless \
+  --namespace layerhouse \
+  --statefulset-name layerhouse \
+  --headless-service layerhouse-headless \
   --replicas 3 \
-  --out ./orb-chrysa-airgap
+  --out ./layerhouse-airgap
 ```
 
 This creates an internal CA, a public registry TLS leaf certificate, and a Raft
@@ -33,7 +33,7 @@ certificate includes wildcard headless-service SANs so later scale-up ordinals
 do not require immediate certificate rotation.
 
 ```text
-orb-chrysa-airgap/
+layerhouse-airgap/
   certs/
     ca.crt
     ca.key
@@ -53,19 +53,19 @@ Keep `ca.key` offline. Do not mount CA private keys into Kubernetes.
 ```bash
 IMAGE_TAG="replace-with-mirrored-server-tag"
 
-orb-chrysa-cli air-gapped k8s bundle-generate \
+layerhouse-ctl air-gapped k8s bundle-generate \
   --registry-endpoint registry.internal.example.com:32000 \
-  --cert-dir ./orb-chrysa-airgap/certs \
-  --namespace orb-chrysa \
-  --server-tls-secret orb-chrysa-server-tls \
-  --raft-tls-secret orb-chrysa-raft-mtls \
-  --image-repository registry.internal.example.com:32000/orb-chrysa-server \
+  --cert-dir ./layerhouse-airgap/certs \
+  --namespace layerhouse \
+  --server-tls-secret layerhouse-server-tls \
+  --raft-tls-secret layerhouse-raft-mtls \
+  --image-repository registry.internal.example.com:32000/layerhouse-server \
   --image-tag "$IMAGE_TAG" \
-  --out ./orb-chrysa-airgap
+  --out ./layerhouse-airgap
 ```
 
 If `--image-repository` and `--image-tag` are omitted, the generated Helm values
-default to GHCR and the installed `orb-chrysa-cli` package version. Set both when
+default to GHCR and the installed `layerhouse-ctl` package version. Set both when
 operators mirror the server image into an internal registry.
 
 The bundle contains:
@@ -91,7 +91,7 @@ the Raft mTLS certificate/key/CA bundles. They do not include CA private keys.
 
 ## Install With Helm
 
-Edit `orb-chrysa-airgap/helm/values-air-gapped.yaml` and set the external S3
+Edit `layerhouse-airgap/helm/values-air-gapped.yaml` and set the external S3
 endpoint, bucket, credentials Secret, and any public Service settings.
 If the registry is exposed through a NodePort, load balancer, or external DNS
 name, keep that hostname in `server.tls.dnsNames` so cert-manager-generated
@@ -102,10 +102,10 @@ the same values file.
 Then install:
 
 ```bash
-helm upgrade --install orb-chrysa ./deploy/kubernetes/helm \
-  --namespace orb-chrysa \
+helm upgrade --install layerhouse ./deploy/kubernetes/helm \
+  --namespace layerhouse \
   --create-namespace \
-  -f ./orb-chrysa-airgap/helm/values-air-gapped.yaml
+  -f ./layerhouse-airgap/helm/values-air-gapped.yaml
 ```
 
 The chart creates a three-pod StatefulSet by default. The public registry/API
@@ -127,7 +127,7 @@ For containerd, the target paths include the registry port:
 
 Restart or reload containerd according to the node OS.
 
-Orb Chrysa does not generate a privileged node-trust DaemonSet by default. If an
+Layerhouse does not generate a privileged node-trust DaemonSet by default. If an
 operator has permission to run a privileged DaemonSet that writes `/etc/containerd`,
 they already have permission to mutate the host and should use the platform's
 standard node-management path instead.
@@ -137,7 +137,7 @@ standard node-management path instead.
 From an operator workstation:
 
 ```bash
-curl --cacert ./orb-chrysa-airgap/certs/ca.crt \
+curl --cacert ./layerhouse-airgap/certs/ca.crt \
   https://registry.internal.example.com:32000/v2/
 ```
 
@@ -150,7 +150,7 @@ crictl pull registry.internal.example.com:32000/qa/alpine:v1
 From Kubernetes:
 
 ```bash
-kubectl run orb-chrysa-pull-test \
+kubectl run layerhouse-pull-test \
   --image=registry.internal.example.com:32000/qa/alpine:v1 \
   --restart=Never
 ```

@@ -47,14 +47,14 @@ refresh_ci_bot_token() {
     local api_token_b64
     local patch
 
-    api_token="$(kubectl -n "$NAMESPACE" get secret orb-chrysa-test-auth -o jsonpath='{.data.ci_bot_api_token}' | base64 -d)"
+    api_token="$(kubectl -n "$NAMESPACE" get secret layerhouse-test-auth -o jsonpath='{.data.ci_bot_api_token}' | base64 -d)"
     token_resp="$(local_curl -skf \
         -H "Content-Type: application/x-www-form-urlencoded" \
         --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-        --data-urlencode "client_id=orb-chrysa" \
+        --data-urlencode "client_id=layerhouse" \
         --data-urlencode "subject_token=$api_token" \
         --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
-        --data-urlencode "audience=orb-chrysa" \
+        --data-urlencode "audience=layerhouse" \
         --data-urlencode "scope=openid profile email groups oci_admin" \
         "$KANIDM_URL/oauth2/token")"
     printf '%s\n' "$token_resp" > "$WORK/ci-bot-token-refresh-response.json"
@@ -72,7 +72,7 @@ refresh_ci_bot_token() {
         --arg token "$token_b64" \
         --arg api_token "$api_token_b64" \
         '{data:{ci_bot_token:$token, ci_bot_api_token:$api_token}}')"
-    kubectl -n "$NAMESPACE" patch secret orb-chrysa-test-auth --type merge -p "$patch" >/dev/null
+    kubectl -n "$NAMESPACE" patch secret layerhouse-test-auth --type merge -p "$patch" >/dev/null
 
     printf '%s' "$ci_token"
 }
@@ -117,10 +117,10 @@ kind_containerd_push() {
 
     echo "=== Falling back to kind containerd push for $image on $node ==="
     record docker save "$image" -o "$image_tar"
-    echo "docker exec -i $node sh -c 'cat > /tmp/orb-chrysa-push-image.tar' < $image_tar" | tee -a "$WORK/commands.log"
-    docker exec -i "$node" sh -c 'cat > /tmp/orb-chrysa-push-image.tar' < "$image_tar"
-    record docker exec "$node" ls -lh /tmp/orb-chrysa-push-image.tar
-    record docker exec "$node" ctr -n k8s.io images import /tmp/orb-chrysa-push-image.tar
+    echo "docker exec -i $node sh -c 'cat > /tmp/layerhouse-push-image.tar' < $image_tar" | tee -a "$WORK/commands.log"
+    docker exec -i "$node" sh -c 'cat > /tmp/layerhouse-push-image.tar' < "$image_tar"
+    record docker exec "$node" ls -lh /tmp/layerhouse-push-image.tar
+    record docker exec "$node" ctr -n k8s.io images import /tmp/layerhouse-push-image.tar
     record docker exec "$node" ctr -n k8s.io images push --user "ci-bot:$password" "$image"
 }
 

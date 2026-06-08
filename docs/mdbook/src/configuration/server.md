@@ -9,8 +9,8 @@ max_concurrent_uploads = 64
 max_concurrent_requests = 512
 
 [server.tls]
-cert_path = "/etc/orb-chrysa/tls/tls.crt"
-key_path = "/etc/orb-chrysa/tls/tls.key"
+cert_path = "/etc/layerhouse/tls/tls.crt"
+key_path = "/etc/layerhouse/tls/tls.key"
 ```
 
 | Key | Type | Default | Description |

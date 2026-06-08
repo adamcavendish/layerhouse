@@ -1,4 +1,4 @@
-name: orb-chrysa-auth-cluster
+name: layerhouse-auth-cluster
 
 services:
   rustfs:
@@ -34,7 +34,7 @@ services:
       /bin/sh -c "
       RUSTFS_IP=$$(getent hosts rustfs | awk '{print $$1}');
       rc alias set local http://$$RUSTFS_IP:9000 $$RUSTFS_ACCESS_KEY $$RUSTFS_SECRET_KEY;
-      rc bucket create local/orb-chrysa -p;
+      rc bucket create local/layerhouse -p;
       "
     restart: "no"
 
@@ -89,17 +89,17 @@ services:
         condition: service_healthy
     restart: "no"
 
-  orb-chrysa-0:
+  layerhouse-0:
     build:
       context: ../..
-    hostname: orb-chrysa-0
+    hostname: layerhouse-0
     ports:
       - "5050:5050"
     environment:
-      HOSTNAME: orb-chrysa-0
+      HOSTNAME: layerhouse-0
     volumes:
-      - shared-config:/etc/orb-chrysa:ro
-    command: ["--config", "/etc/orb-chrysa/auth-cluster.toml"]
+      - shared-config:/etc/layerhouse:ro
+    command: ["--config", "/etc/layerhouse/auth-cluster.toml"]
     depends_on:
       kanidm-setup:
         condition: service_completed_successfully
@@ -108,19 +108,19 @@ services:
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
-  orb-chrysa-1:
+  layerhouse-1:
     build:
       context: ../..
-    hostname: orb-chrysa-1
+    hostname: layerhouse-1
     ports:
       - "5051:5050"
     environment:
-      HOSTNAME: orb-chrysa-1
+      HOSTNAME: layerhouse-1
     volumes:
-      - shared-config:/etc/orb-chrysa:ro
-    command: ["--config", "/etc/orb-chrysa/auth-cluster.toml"]
+      - shared-config:/etc/layerhouse:ro
+    command: ["--config", "/etc/layerhouse/auth-cluster.toml"]
     depends_on:
       kanidm-setup:
         condition: service_completed_successfully
@@ -129,19 +129,19 @@ services:
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
-  orb-chrysa-2:
+  layerhouse-2:
     build:
       context: ../..
-    hostname: orb-chrysa-2
+    hostname: layerhouse-2
     ports:
       - "5052:5050"
     environment:
-      HOSTNAME: orb-chrysa-2
+      HOSTNAME: layerhouse-2
     volumes:
-      - shared-config:/etc/orb-chrysa:ro
-    command: ["--config", "/etc/orb-chrysa/auth-cluster.toml"]
+      - shared-config:/etc/layerhouse:ro
+    command: ["--config", "/etc/layerhouse/auth-cluster.toml"]
     depends_on:
       kanidm-setup:
         condition: service_completed_successfully
@@ -150,7 +150,7 @@ services:
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
 volumes:
   rustfs-data:

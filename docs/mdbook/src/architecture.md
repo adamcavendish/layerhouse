@@ -1,6 +1,6 @@
 # Architecture
 
-orb-chrysa is organized around a single architectural insight: **metadata lives in
+layerhouse is organized around a single architectural insight: **metadata lives in
 the Raft state machine, blobs live in S3**. Raft owns the index (tags, manifests,
 ref counts), S3 owns the bytes (layers, configs).
 
@@ -22,10 +22,10 @@ Two crates, modules not crates:
 
 | Crate | Purpose |
 |-------|---------|
-| `orb-chrysa-server` | Registry server — HTTP API, Raft, storage, auth, dashboard |
-| `orb-chrysa-cli` | CLI tool for registry operations and upstream auth |
+| `layerhouse-server` | Registry server — HTTP API, Raft, storage, auth, dashboard |
+| `layerhouse-ctl` | CLI tool for registry operations and upstream auth |
 
-All server logic is modules inside `orb-chrysa-server`:
+All server logic is modules inside `layerhouse-server`:
 - `routes/` — axum HTTP handlers (OCI Distribution Spec, admin API, dashboard API)
 - `raft/` — OpenRaft integration (state machine, log store, network, membership)
 - `store/` — Storage traits (MetadataStore, BlobStore) and S3 implementation
@@ -35,7 +35,7 @@ All server logic is modules inside `orb-chrysa-server`:
 
 ## Trait Boundary
 
-The critical abstraction in orb-chrysa is the trait boundary between metadata and
+The critical abstraction in layerhouse is the trait boundary between metadata and
 blob storage:
 
 - **`MetadataStore`** — Raft-backed. Manifests, tags, repos, referrers, ref counts,

@@ -12,7 +12,7 @@ isolation, and cleanup.
 ## Product Contract Summary
 
 Mirror and Proxy Cache must work with real OCI registries and real OCI clients.
-Mirror rules create jobs that actively synchronize tags between orb-chrysa and
+Mirror rules create jobs that actively synchronize tags between layerhouse and
 an upstream registry. Proxy Cache serves upstream content through a local prefix,
 caches misses, and can warm selected tags. Both paths must honor credentials,
 plain HTTP, and supported outbound proxy settings while keeping secrets out of
@@ -48,9 +48,9 @@ The executable regression script is:
 tests/production/mirror-proxy-workflow.sh
 ```
 
-It assumes a running orb-chrysa compose cluster at `localhost:5050`, writes
+It assumes a running layerhouse compose cluster at `localhost:5050`, writes
 evidence to `/tmp/orb-mirror-proxy-{RUN_ID}`, and joins the upstream registry
-container to the `orb-chrysa_default` Docker network. Override `REGISTRY`,
+container to the `layerhouse_default` Docker network. Override `REGISTRY`,
 `SCHEME`, `COMPOSE_NETWORK`, `UPSTREAM_IMAGE`, `RUN_ID`, or `EVIDENCE_ROOT` for
 other environments.
 
@@ -82,12 +82,12 @@ otherwise use `just check` for the normal CI-quality gate and run
 1. Start a disposable upstream `registry:2` container on the compose network.
 2. Expose it on a random localhost port for host-side seeding.
 3. Verify `/v2/` from the host.
-4. Configure orb-chrysa rules with the Docker-network registry name, not
+4. Configure layerhouse rules with the Docker-network registry name, not
    `localhost`.
 
 **Expected**:
 - Host can seed artifacts through `localhost:{random_port}`.
-- orb-chrysa containers can reach the same registry by container name.
+- layerhouse containers can reach the same registry by container name.
 - No Docker Hub pulls happen during mirror/proxy workflow execution after the
   upstream registry image is present locally.
 
@@ -104,13 +104,13 @@ otherwise use `just check` for the normal CI-quality gate and run
    - direct outbound proxy
 3. Trigger `POST /api/v1/admin/mirror/rules/{id}/trigger`.
 4. Poll `/api/v1/admin/mirror/jobs/{job_id}/runs` until a terminal status.
-5. Pull `qa/mirror-{RUN_ID}:v1` and `:v2` from orb-chrysa with ORAS.
+5. Pull `qa/mirror-{RUN_ID}:v1` and `:v2` from layerhouse with ORAS.
 
 **Expected**:
 - Trigger returns a mirror sync job with the rule ID.
 - The run reaches `Succeeded`.
 - `tags_synced` includes `v1` and `v2`.
-- Pulled bytes from orb-chrysa exactly match upstream seed bytes.
+- Pulled bytes from layerhouse exactly match upstream seed bytes.
 - Jobs are observable through mirror job APIs and are read-only history.
 
 ### MP3. Proxy Cache Pull-Through And Cached Hit
@@ -123,14 +123,14 @@ otherwise use `just check` for the normal CI-quality gate and run
    - `upstream_prefix=upstream/cache-src`
    - no warm schedule
    - direct outbound proxy
-3. Pull `qa/cache-{RUN_ID}:v1` from orb-chrysa.
+3. Pull `qa/cache-{RUN_ID}:v1` from layerhouse.
 4. Pause or otherwise make the upstream registry unavailable.
-5. Pull the same tag from orb-chrysa again.
+5. Pull the same tag from layerhouse again.
 
 **Expected**:
 - First pull fetches upstream, stores manifest metadata and blob bytes locally,
   and returns the artifact to the client.
-- Second pull succeeds from orb-chrysa local storage even when the upstream is
+- Second pull succeeds from layerhouse local storage even when the upstream is
   unavailable.
 - Dashboard repository/detail APIs show the cached digest under the local cache
   repository.
@@ -142,7 +142,7 @@ otherwise use `just check` for the normal CI-quality gate and run
 2. Create a second proxy-cache rule with `warm_filters` pattern `warm`.
 3. Call `POST /api/v1/admin/proxy-cache/{id}/warm`.
 4. Poll `/api/v1/admin/mirror/jobs/{job_id}/runs` until terminal.
-5. Pull `qa/cache-warm-{RUN_ID}:warm` from orb-chrysa.
+5. Pull `qa/cache-warm-{RUN_ID}:warm` from layerhouse.
 
 **Expected**:
 - Warm now returns a proxy-cache sync job.
@@ -153,7 +153,7 @@ otherwise use `just check` for the normal CI-quality gate and run
 ### MP5. Push Mirror Trigger And Upstream Publication
 
 **Steps**:
-1. Push a local artifact to orb-chrysa repository `qa/push-src-{RUN_ID}:release`.
+1. Push a local artifact to layerhouse repository `qa/push-src-{RUN_ID}:release`.
 2. Create a manual push mirror rule:
    - `direction=push`
    - `local_prefix=qa/push-src-{RUN_ID}`
@@ -213,7 +213,7 @@ otherwise use `just check` for the normal CI-quality gate and run
 
 **Steps**:
 1. Delete test mirror rules and proxy-cache rules.
-2. Delete disposable orb-chrysa repositories.
+2. Delete disposable layerhouse repositories.
 3. Stop/remove the upstream registry container.
 4. Check `/api/v1/admin/cluster/status`.
 

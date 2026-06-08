@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Production-style OCI workflow smoke test for a running orb-chrysa registry.
+# Production-style OCI workflow smoke test for a running layerhouse registry.
 #
 # Requires a live registry, Docker daemon, ORAS, curl, and jq.
 # Defaults target the local compose cluster at localhost:5050.
@@ -74,7 +74,7 @@ need awk
 need grep
 
 mkdir -p "$WORK/oras-pull-tag" "$WORK/oras-pull-digest" "$WORK/follower-pull" "$WORK/dockerctx"
-printf 'orb-chrysa OCI workflow payload %s\n' "$RUN_ID" > "$WORK/payload.txt"
+printf 'layerhouse OCI workflow payload %s\n' "$RUN_ID" > "$WORK/payload.txt"
 printf 'follower-routed payload %s\n' "$RUN_ID" > "$WORK/follower.txt"
 printf 'docker payload %s\n' "$RUN_ID" > "$WORK/dockerctx/hello.txt"
 printf 'FROM scratch\nCOPY hello.txt /hello.txt\n' > "$WORK/dockerctx/Dockerfile"
@@ -111,9 +111,9 @@ log "OCI2 ORAS push and pull by tag/digest"
 (
     cd "$WORK"
     oras push "${ORAS_TRANSPORT_FLAGS[@]}" --no-tty --format json \
-        --artifact-type application/vnd.orb-chrysa.qa.v1 \
+        --artifact-type application/vnd.layerhouse.qa.v1 \
         "$REGISTRY/$ORAS_REPO:alpha,beta" \
-        "payload.txt:application/vnd.orb-chrysa.qa.payload.v1+txt"
+        "payload.txt:application/vnd.layerhouse.qa.payload.v1+txt"
 ) | tee "$WORK/oras-push.json"
 ORAS_DIGEST="$(jq -r '.digest' "$WORK/oras-push.json")"
 [[ "$ORAS_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
@@ -226,9 +226,9 @@ FOLLOWER_PORT="${FOLLOWER_PORT:-5050}"
 (
     cd "$WORK"
     oras push "${ORAS_TRANSPORT_FLAGS[@]}" --no-tty --format json \
-        --artifact-type application/vnd.orb-chrysa.qa.v1 \
+        --artifact-type application/vnd.layerhouse.qa.v1 \
         "localhost:$FOLLOWER_PORT/$FOLLOWER_REPO:from-follower" \
-        "follower.txt:application/vnd.orb-chrysa.qa.payload.v1+txt"
+        "follower.txt:application/vnd.layerhouse.qa.payload.v1+txt"
 ) | tee "$WORK/follower-push.json"
 FOLLOWER_DIGEST="$(jq -r '.digest' "$WORK/follower-push.json")"
 [[ "$FOLLOWER_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]

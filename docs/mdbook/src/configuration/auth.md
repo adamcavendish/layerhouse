@@ -5,11 +5,11 @@ all endpoints are open.
 
 ```toml
 [auth]
-issuer_url = "https://registry.example.com/oauth2/openid/orb-chrysa"
-issuer_internal_url = "https://kanidm:8443/oauth2/openid/orb-chrysa"
-issuer_internal_urls = ["https://kanidm-a:8443/oauth2/openid/orb-chrysa", "https://kanidm-b:8443/oauth2/openid/orb-chrysa"]
+issuer_url = "https://registry.example.com/oauth2/openid/layerhouse"
+issuer_internal_url = "https://kanidm:8443/oauth2/openid/layerhouse"
+issuer_internal_urls = ["https://kanidm-a:8443/oauth2/openid/layerhouse", "https://kanidm-b:8443/oauth2/openid/layerhouse"]
 jwks_urls = []
-client_id = "orb-chrysa"
+client_id = "layerhouse"
 client_secret = "<secret>"
 token_endpoint_url = "http://localhost:5050/v2/token"
 redirect_uri = "http://localhost:5050/oauth2/callback"

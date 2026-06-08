@@ -1,4 +1,4 @@
-# Multi-Replica Test Plan — orb-chrysa
+# Multi-Replica Test Plan — layerhouse
 
 **Date**: 2026-05-21
 **Type**: Test Plan (not a run — enumerates tests to execute)
@@ -10,8 +10,8 @@
 
 ## Architecture Summary (for test planning)
 
-- **3 named services**: `orb-chrysa-0` (node_id=1), `orb-chrysa-1` (node_id=2), `orb-chrysa-2` (node_id=3)
-- **DNS Discovery**: All nodes resolve `orb-chrysa` → all peer IPs. No static peer list.
+- **3 named services**: `layerhouse-0` (node_id=1), `layerhouse-1` (node_id=2), `layerhouse-2` (node_id=3)
+- **DNS Discovery**: All nodes resolve `layerhouse` → all peer IPs. No static peer list.
 - **Bootstrap**: Node 0 self-bootstraps if no cluster exists. Other nodes discover and join.
 - **Raft**: openraft with ephemeral redb log + S3 snapshots. No PVC.
 - **Reads**: All nodes serve reads from their local state machine (follower reads). Writes forwarded to leader.
@@ -29,9 +29,9 @@
 
 ### Node Identity
 
-- `orb-chrysa-0` → node_id=1 (hostname ordinal 0 + 1)
-- `orb-chrysa-1` → node_id=2
-- `orb-chrysa-2` → node_id=3
+- `layerhouse-0` → node_id=1 (hostname ordinal 0 + 1)
+- `layerhouse-1` → node_id=2
+- `layerhouse-2` → node_id=3
 
 ---
 
@@ -196,7 +196,7 @@ wait_for_cluster_leader() {
 **Precondition**: 3-node cluster running, identify current leader.
 
 **Steps**:
-1. `docker compose stop orb-chrysa-<leader-ordinal>`
+1. `docker compose stop layerhouse-<leader-ordinal>`
 2. Wait 5 seconds
 3. Check `/raft/status` on remaining nodes
 
@@ -225,7 +225,7 @@ wait_for_cluster_leader() {
 **Precondition**: 3-node cluster, kill leader.
 
 **Steps**:
-1. `docker compose stop orb-chrysa-0` (if node 0 is leader)
+1. `docker compose stop layerhouse-0` (if node 0 is leader)
 2. Immediately try `docker push` to a surviving node
 3. Wait for new leader election
 4. Try `docker push` again
@@ -233,7 +233,7 @@ wait_for_cluster_leader() {
 **Expected**:
 - Push during leaderless window → 503 or redirect to (old) leader
 - Push after election → succeeds on new leader
-- Followers auto-redirect writes (307 to leader via `OrbChrysaError::NotLeader`)
+- Followers auto-redirect writes (307 to leader via `LayerhouseError::NotLeader`)
 
 ---
 
@@ -422,7 +422,7 @@ whose manifest entries are missing newer metadata fields such as `size_bytes`,
 **Steps**:
 1. Start the existing RustFS volume without deleting S3 data.
 2. Rebuild and restart the cluster:
-   `docker compose -f deploy/compose/cluster.yml up -d --build orb-chrysa-0 orb-chrysa-1 orb-chrysa-2`
+   `docker compose -f deploy/compose/cluster.yml up -d --build layerhouse-0 layerhouse-1 layerhouse-2`
 3. Inspect logs for all three registry containers.
 4. Call:
    `curl -s http://localhost:5050/api/v1/repositories/{name}/manifests?n=50 | jq .`
@@ -443,7 +443,7 @@ whose manifest entries are missing newer metadata fields such as `size_bytes`,
 #### 6.1 Join — follower adds itself
 
 **Steps**:
-1. Add a new named service `orb-chrysa-3` to cluster compose
+1. Add a new named service `layerhouse-3` to cluster compose
 2. Start it
 3. Check `/raft/status` on any node
 
@@ -585,7 +585,7 @@ old unreferenced blob.
 **Precondition**: 3-node cluster.
 
 **Steps**:
-1. `docker compose stop orb-chrysa-1`
+1. `docker compose stop layerhouse-1`
 2. Check logs
 3. Check S3 for updated snapshot
 
@@ -609,7 +609,7 @@ old unreferenced blob.
 #### 8.3 SIGKILL (unclean shutdown)
 
 **Steps**:
-1. `docker kill --signal=KILL orb-chrysa-0`
+1. `docker kill --signal=KILL layerhouse-0`
 2. Check remaining nodes
 
 **Expected**:
@@ -624,7 +624,7 @@ old unreferenced blob.
 #### 9.1 Discovery resolves all peers
 
 **Steps**:
-1. Check DNS resolution inside any container: `getent hosts orb-chrysa`
+1. Check DNS resolution inside any container: `getent hosts layerhouse`
 
 **Expected**:
 - Returns IPs of all 3 nodes
@@ -635,7 +635,7 @@ old unreferenced blob.
 **Precondition**: Temporarily remove DNS aliases.
 
 **Steps**:
-1. Modify compose to remove `aliases: [orb-chrysa]` from one node
+1. Modify compose to remove `aliases: [layerhouse]` from one node
 2. Restart
 3. Check join behavior
 
@@ -772,7 +772,7 @@ old unreferenced blob.
 
 - `docker compose` v2
 - RustFS images available (pulled from Docker Hub)
-- orb-chrysa Docker image built
+- layerhouse Docker image built
 - Ports 5050-5052 free on host
 - `curl` and `jq` for CLI verification
 
@@ -807,7 +807,7 @@ wait_for_cluster_leader 60
 ### K8S-MANUAL-PARTITION-01: Network Partition And Flap Behavior
 
 **Preconditions**: Disposable Kubernetes cluster with a CNI or node firewall
-mechanism that can block traffic between selected Orb Chrysa pods without
+mechanism that can block traffic between selected Layerhouse pods without
 deleting the pods.
 
 **Commands**:
@@ -815,7 +815,7 @@ deleting the pods.
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-partition-$RUN_ID"
-export NAMESPACE="orb-chrysa"
+export NAMESPACE="layerhouse"
 mkdir -p "$WORK"
 kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/pods-before.txt"
 
@@ -825,7 +825,7 @@ kubectl -n "$NAMESPACE" get pods -o wide | tee "$WORK/pods-before.txt"
 curl -fsS "$REGISTRY_STATUS_URL" | tee "$WORK/status-during-partition.json"
 
 # Remove the partition and verify recovery.
-kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
 curl -fsS "$REGISTRY_STATUS_URL" | tee "$WORK/status-after-heal.json"
 ```
 
@@ -853,7 +853,7 @@ temporary low snapshot threshold.
 ```bash
 export RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export WORK="/tmp/orb-snapshot-$RUN_ID"
-export NAMESPACE="orb-chrysa"
+export NAMESPACE="layerhouse"
 mkdir -p "$WORK"
 
 for i in $(seq 1 1200); do
@@ -862,10 +862,10 @@ for i in $(seq 1 1200); do
   :
 done
 
-kubectl -n "$NAMESPACE" logs statefulset/orb-chrysa --all-containers=true \
+kubectl -n "$NAMESPACE" logs statefulset/layerhouse --all-containers=true \
   | tee "$WORK/logs-after-snapshot-load.txt"
-kubectl -n "$NAMESPACE" rollout restart statefulset/orb-chrysa
-kubectl -n "$NAMESPACE" rollout status statefulset/orb-chrysa --timeout=5m
+kubectl -n "$NAMESPACE" rollout restart statefulset/layerhouse
+kubectl -n "$NAMESPACE" rollout status statefulset/layerhouse --timeout=5m
 curl -fsS "$REGISTRY_STATUS_URL" | tee "$WORK/status-after-restore.json"
 ```
 

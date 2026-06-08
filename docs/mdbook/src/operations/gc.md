@@ -1,6 +1,6 @@
 # Garbage Collection
 
-Orb Chrysa uses reference-count based garbage collection to clean up unreferenced
+Layerhouse uses reference-count based garbage collection to clean up unreferenced
 blobs from S3.
 
 ## How It Works

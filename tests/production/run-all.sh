@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the local production-style workflow suite against a live orb-chrysa
+# Run the local production-style workflow suite against a live layerhouse
 # registry. Each child script owns its disposable data and evidence directory.
 set -euo pipefail
 

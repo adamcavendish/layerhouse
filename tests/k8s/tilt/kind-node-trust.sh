@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
-NAMESPACE="${ORB_NAMESPACE:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
+NAMESPACE="${ORB_NAMESPACE:-layerhouse-tilt}"
 REGISTRY_ENDPOINT="${REGISTRY_ENDPOINT:-localhost:32050}"
 WORK="${WORK:-target/tilt/node-trust}"
 RESTART_CONTAINERD="${RESTART_CONTAINERD_FOR_TRUST:-0}"
@@ -21,17 +21,17 @@ need kind
 need kubectl
 need base64
 
-echo "=== Waiting for Orb Chrysa server TLS Secret ==="
+echo "=== Waiting for Layerhouse server TLS Secret ==="
 for _ in $(seq 1 90); do
-    if kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls >/dev/null 2>&1; then
+    if kubectl -n "$NAMESPACE" get secret layerhouse-server-tls >/dev/null 2>&1; then
         break
     fi
     sleep 2
 done
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls >/dev/null
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls >/dev/null
 
 CA="$WORK/ca.crt"
-kubectl -n "$NAMESPACE" get secret orb-chrysa-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
+kubectl -n "$NAMESPACE" get secret layerhouse-server-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > "$CA"
 
 HOSTS="$WORK/hosts.toml"
 cat > "$HOSTS" <<EOF

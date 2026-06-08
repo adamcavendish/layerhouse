@@ -1,4 +1,4 @@
-name: orb-chrysa-cluster
+name: layerhouse-cluster
 
 services:
   rustfs:
@@ -34,66 +34,66 @@ services:
       /bin/sh -c "
       RUSTFS_IP=$$(getent hosts rustfs | awk '{print $$1}');
       rc alias set local http://$$RUSTFS_IP:9000 $$RUSTFS_ACCESS_KEY $$RUSTFS_SECRET_KEY;
-      rc bucket create local/orb-chrysa -p;
+      rc bucket create local/layerhouse -p;
       "
     restart: "no"
 
-  orb-chrysa-0:
+  layerhouse-0:
     build:
       context: ../..
-    hostname: orb-chrysa-0
+    hostname: layerhouse-0
     ports:
       - "5050:5050"
     environment:
-      HOSTNAME: orb-chrysa-0
+      HOSTNAME: layerhouse-0
     volumes:
-      - ${ORB_CHRYSA_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/orb-chrysa/config.toml:ro
-    command: ["--config", "/etc/orb-chrysa/config.toml"]
+      - ${LAYERHOUSE_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/layerhouse/config.toml:ro
+    command: ["--config", "/etc/layerhouse/config.toml"]
     depends_on:
       rustfs-init:
         condition: service_completed_successfully
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
-  orb-chrysa-1:
+  layerhouse-1:
     build:
       context: ../..
-    hostname: orb-chrysa-1
+    hostname: layerhouse-1
     ports:
       - "5051:5050"
     environment:
-      HOSTNAME: orb-chrysa-1
+      HOSTNAME: layerhouse-1
     volumes:
-      - ${ORB_CHRYSA_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/orb-chrysa/config.toml:ro
-    command: ["--config", "/etc/orb-chrysa/config.toml"]
+      - ${LAYERHOUSE_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/layerhouse/config.toml:ro
+    command: ["--config", "/etc/layerhouse/config.toml"]
     depends_on:
       rustfs-init:
         condition: service_completed_successfully
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
-  orb-chrysa-2:
+  layerhouse-2:
     build:
       context: ../..
-    hostname: orb-chrysa-2
+    hostname: layerhouse-2
     ports:
       - "5052:5050"
     environment:
-      HOSTNAME: orb-chrysa-2
+      HOSTNAME: layerhouse-2
     volumes:
-      - ${ORB_CHRYSA_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/orb-chrysa/config.toml:ro
-    command: ["--config", "/etc/orb-chrysa/config.toml"]
+      - ${LAYERHOUSE_CONFIG:-../../tests/compose/config/cluster.toml}:/etc/layerhouse/config.toml:ro
+    command: ["--config", "/etc/layerhouse/config.toml"]
     depends_on:
       rustfs-init:
         condition: service_completed_successfully
     networks:
       default:
         aliases:
-          - orb-chrysa
+          - layerhouse
 
 volumes:
   rustfs-data:

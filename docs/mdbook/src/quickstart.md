@@ -1,6 +1,6 @@
 # Quick Start
 
-Get orb-chrysa running locally in under a minute.
+Get layerhouse running locally in under a minute.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Wait for all services to be healthy:
 
 ```bash
 docker compose -f deploy/compose/cluster.yml ps
-# All orb-chrysa-N services should show "healthy"
+# All layerhouse-N services should show "healthy"
 ```
 
 Check cluster status:
@@ -35,7 +35,7 @@ just cluster-status
 # Pull a small test image
 docker pull alpine:latest
 
-# Tag it for orb-chrysa
+# Tag it for layerhouse
 docker tag alpine:latest localhost:5050/hello-world/alpine:v1
 
 # Push
@@ -44,14 +44,14 @@ docker push localhost:5050/hello-world/alpine:v1
 # Remove local copy
 docker rmi localhost:5050/hello-world/alpine:v1
 
-# Pull from orb-chrysa
+# Pull from layerhouse
 docker pull localhost:5050/hello-world/alpine:v1
 ```
 
 ## Using ORAS
 
 ```bash
-echo "hello orb-chrysa" > artifact.txt
+echo "hello layerhouse" > artifact.txt
 oras push --plain-http localhost:5050/hello-world/artifact:v1 artifact.txt
 oras pull --plain-http localhost:5050/hello-world/artifact:v1
 ```

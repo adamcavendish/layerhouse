@@ -1,6 +1,6 @@
 # Binary
 
-Run orb-chrysa directly from the binary. No root required, no container
+Run layerhouse directly from the binary. No root required, no container
 runtime needed. Deploy with systemd or oxmgr for process supervision.
 
 ## Quick start (single node)
@@ -11,10 +11,10 @@ rustfs &
 
 # 2. Create bucket (one-time)
 rc alias set local http://127.0.0.1:9000 mykey mysecret
-rc bucket create local/orb-chrysa -p
+rc bucket create local/layerhouse -p
 
-# 3. Start orb-chrysa
-orb-chrysa-server --config deploy/binary/config/standalone.toml
+# 3. Start layerhouse
+layerhouse-server --config deploy/binary/config/standalone.toml
 ```
 
 ## Cluster (3 nodes)
@@ -24,17 +24,17 @@ convention (`<prefix>-<N>`):
 
 ```bash
 # Host 1 (bootstraps cluster)
-HOSTNAME=orb-chrysa-0 orb-chrysa-server --config deploy/binary/config/cluster.toml
+HOSTNAME=layerhouse-0 layerhouse-server --config deploy/binary/config/cluster.toml
 
 # Host 2
-HOSTNAME=orb-chrysa-1 orb-chrysa-server --config deploy/binary/config/cluster.toml
+HOSTNAME=layerhouse-1 layerhouse-server --config deploy/binary/config/cluster.toml
 
 # Host 3
-HOSTNAME=orb-chrysa-2 orb-chrysa-server --config deploy/binary/config/cluster.toml
+HOSTNAME=layerhouse-2 layerhouse-server --config deploy/binary/config/cluster.toml
 ```
 
 Peers discover each other via DNS. Set up DNS records or `/etc/hosts` entries
-for `orb-chrysa-0`, `orb-chrysa-1`, `orb-chrysa-2`.
+for `layerhouse-0`, `layerhouse-1`, `layerhouse-2`.
 
 ## Process management
 
@@ -50,11 +50,11 @@ root privileges. See [OxMgr](https://github.com/Vladimir-Urik/OxMgr).
 ### systemd
 
 ```bash
-sudo cp deploy/binary/systemd/orb-chrysa.service /etc/systemd/system/
-sudo systemctl enable --now orb-chrysa
+sudo cp deploy/binary/systemd/layerhouse.service /etc/systemd/system/
+sudo systemctl enable --now layerhouse
 ```
 
-Systemd requires root for installation. The service runs as the `orb-chrysa`
+Systemd requires root for installation. The service runs as the `layerhouse`
 user. Adjust `User=` and `ExecStart=` in the unit file for your environment.
 
 ## Configuration paths
@@ -62,27 +62,27 @@ user. Adjust `User=` and `ExecStart=` in the unit file for your environment.
 Binary deployment uses paths relative to the working directory:
 
 ```
-./config.toml          # orb-chrysa config (or set ORB_CHRYSA_CONFIG)
+./config.toml          # layerhouse config (or set LAYERHOUSE_CONFIG)
 ./data/raft/           # Raft log (ephemeral, no backup needed)
 ```
 
-No `/etc/orb-chrysa/` writes required. Override with:
+No `/etc/layerhouse/` writes required. Override with:
 
 ```bash
-orb-chrysa-server --config /path/to/config.toml
+layerhouse-server --config /path/to/config.toml
 ```
 
 ## Upgrading
 
 ```bash
 # 1. Graceful shutdown (uploads snapshot, leaves Raft)
-kill -SIGTERM $(pidof orb-chrysa-server)
+kill -SIGTERM $(pidof layerhouse-server)
 
 # 2. Replace binary
-cp orb-chrysa-server-new /usr/local/bin/orb-chrysa-server
+cp layerhouse-server-new /usr/local/bin/layerhouse-server
 
 # 3. Restart
-orb-chrysa-server --config config.toml
+layerhouse-server --config config.toml
 ```
 
 The node rejoins the Raft cluster automatically on restart. Snapshots

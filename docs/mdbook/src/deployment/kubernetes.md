@@ -1,6 +1,6 @@
 # Kubernetes
 
-orb-chrysa runs as a StatefulSet with automatic Raft membership management.
+layerhouse runs as a StatefulSet with automatic Raft membership management.
 The Helm chart is at `deploy/kubernetes/helm/`.
 
 ## Architecture
@@ -22,9 +22,9 @@ The Helm chart is at `deploy/kubernetes/helm/`.
 └──────────────────────────────────────────────────┘
 ```
 
-- Each pod gets a stable hostname: `orb-chrysa-0`, `orb-chrysa-1`, ...
+- Each pod gets a stable hostname: `layerhouse-0`, `layerhouse-1`, ...
 - Ordinal 0 bootstraps the Raft cluster if no cluster exists
-- DNS discovery (`discovery_dns = "orb-chrysa"`) finds peers automatically
+- DNS discovery (`discovery_dns = "layerhouse"`) finds peers automatically
 - StatefulSet reconciler adjusts Raft voters when replicas change
 - Ephemeral redb log — no PVC needed. State recovers from S3 snapshots
 
@@ -39,26 +39,26 @@ The Helm chart is at `deploy/kubernetes/helm/`.
 ## Install
 
 ```bash
-helm install orb-chrysa ./deploy/kubernetes/helm \
-  --namespace orb-chrysa \
+helm install layerhouse ./deploy/kubernetes/helm \
+  --namespace layerhouse \
   --create-namespace \
   --set storage.s3.endpoint=https://s3.example.internal \
-  --set storage.s3.bucket=orb-chrysa \
+  --set storage.s3.bucket=layerhouse \
   --set storage.s3.region=us-east-1
 ```
 
 ### With existing Secrets
 
 ```bash
-kubectl -n orb-chrysa create secret generic orb-chrysa-s3 \
+kubectl -n layerhouse create secret generic layerhouse-s3 \
   --from-literal=access_key=ACCESS_KEY \
   --from-literal=secret_key=SECRET_KEY
 
-helm install orb-chrysa ./deploy/kubernetes/helm \
-  --namespace orb-chrysa \
-  --set storage.s3.existingSecret=orb-chrysa-s3 \
+helm install layerhouse ./deploy/kubernetes/helm \
+  --namespace layerhouse \
+  --set storage.s3.existingSecret=layerhouse-s3 \
   --set storage.s3.endpoint=https://s3.example.internal \
-  --set storage.s3.bucket=orb-chrysa
+  --set storage.s3.bucket=layerhouse
 ```
 
 ## Defaults
@@ -71,11 +71,11 @@ helm install orb-chrysa ./deploy/kubernetes/helm \
 | Raft mTLS | enabled |
 | Authentication | disabled |
 | External S3 | required |
-| Image | `ghcr.io/adamcavendish/orb-chrysa-server:<version>` |
+| Image | `ghcr.io/adamcavendish/layerhouse-server:<version>` |
 
 ## Sidecars
 
-The Helm chart deploys only orb-chrysa. You deploy RustFS and an OIDC provider separately:
+The Helm chart deploys only layerhouse. You deploy RustFS and an OIDC provider separately:
 
 - **RustFS** — Run as a separate StatefulSet or use an external S3 endpoint
 - **OIDC Provider** — Run as a separate Deployment for OIDC authentication (Kanidm recommended)
@@ -86,10 +86,10 @@ See [Authentication](../authentication/kanidm.md) for Kanidm integration.
 
 ```bash
 # Scale up — new pod auto-joins the Raft cluster
-kubectl scale statefulset orb-chrysa --replicas=5
+kubectl scale statefulset layerhouse --replicas=5
 
 # Scale down — pod gracefully leaves before termination
-kubectl scale statefulset orb-chrysa --replicas=3
+kubectl scale statefulset layerhouse --replicas=3
 ```
 
 The Kubernetes reconciler (`raft.kubernetes.enabled: true`) handles Raft

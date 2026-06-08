@@ -12,7 +12,7 @@ Service accounts are created in kanidm:
 kanidm service-account create ci-bot --display-name "CI Bot"
 
 # Generate an API token
-kanidm service-account api-token generate ci-bot --label "orb-chrysa-ci"
+kanidm service-account api-token generate ci-bot --label "layerhouse-ci"
 ```
 
 The API token is a JWS (JSON Web Signature) bearer token. Use it as the `docker login`
@@ -25,7 +25,7 @@ echo "<api-token>" | docker login localhost:5050 --username ci-bot --password-st
 ## How It Works
 
 1. CI pipeline authenticates with the IdP access token
-2. Orb Chrysa's `/v2/token` endpoint validates the token via the JWKS endpoint
+2. Layerhouse's `/v2/token` endpoint validates the token via the JWKS endpoint
 3. IdP groups are mapped to OCI scopes through the config's `[[auth.permissions]]`
 4. A short-lived OCI bearer token is issued for the session
 

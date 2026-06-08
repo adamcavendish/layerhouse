@@ -1,6 +1,6 @@
-allow_k8s_contexts("kind-orb-chrysa-tilt")
+allow_k8s_contexts("kind-layerhouse-tilt")
 
-config.define_bool("skip_image_build", False, "Use a preloaded orb-chrysa-server:tilt image")
+config.define_bool("skip_image_build", False, "Use a preloaded layerhouse-server:tilt image")
 config.define_bool(
     "host_docker_trust",
     False,
@@ -11,19 +11,19 @@ host_docker_trust = cfg.get("host_docker_trust", False)
 
 if not cfg.get("skip_image_build", False):
     docker_build(
-        "orb-chrysa-server:tilt",
+        "layerhouse-server:tilt",
         ".",
         dockerfile="Dockerfile",
         ignore=[
             "target",
             ".git",
             "tests/conformance/results",
-            "crates/orb-chrysa-server/dashboard/node_modules",
-            "crates/orb-chrysa-server/dashboard/dist",
+            "crates/layerhouse-server/dashboard/node_modules",
+            "crates/layerhouse-server/dashboard/dist",
         ],
     )
 else:
-    print("Skipping orb-chrysa-server image build; expecting orb-chrysa-server:tilt to be preloaded")
+    print("Skipping layerhouse-server image build; expecting layerhouse-server:tilt to be preloaded")
 
 local_resource(
     "cert-manager",
@@ -33,7 +33,7 @@ local_resource(
 
 local_resource(
     "local-ca",
-    "tests/k8s/tilt/render-local-ca.sh | kubectl apply -f - && kubectl -n cert-manager wait --for=condition=Ready certificate/orb-chrysa-ca --timeout=180s",
+    "tests/k8s/tilt/render-local-ca.sh | kubectl apply -f - && kubectl -n cert-manager wait --for=condition=Ready certificate/layerhouse-ca --timeout=180s",
     deps=["tests/k8s/tilt/render-local-ca.sh"],
     resource_deps=["cert-manager"],
 )
@@ -54,7 +54,7 @@ local_resource(
 
 k8s_yaml(local("tests/k8s/tilt/render-helm.sh"))
 k8s_resource(
-    "orb-chrysa",
+    "layerhouse",
     resource_deps=["kanidm-bootstrap", "rustfs-init", "local-ca"],
 )
 
@@ -62,7 +62,7 @@ local_resource(
     "node-trust",
     "tests/k8s/tilt/kind-node-trust.sh",
     deps=["tests/k8s/tilt/kind-node-trust.sh"],
-    resource_deps=["orb-chrysa"],
+    resource_deps=["layerhouse"],
 )
 
 smoke_deps = ["node-trust"]

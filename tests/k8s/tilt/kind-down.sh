@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER="${KIND_CLUSTER_NAME:-orb-chrysa-tilt}"
+CLUSTER="${KIND_CLUSTER_NAME:-layerhouse-tilt}"
 
 if command -v tilt >/dev/null 2>&1; then
     tilt down --context "kind-$CLUSTER" || true
