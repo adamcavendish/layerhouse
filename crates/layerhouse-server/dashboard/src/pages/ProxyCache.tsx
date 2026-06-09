@@ -19,6 +19,7 @@ import type {
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 import ErrorBanner from "../components/ErrorBanner";
+import { normalizeOptionalPrefix, normalizeRegistry, upstreamLabel } from "../lib/format";
 import { t } from "../lib/i18n";
 
 interface CacheForm {
@@ -105,8 +106,8 @@ function toPayload(form: CacheForm): ProxyCacheCreate {
   return {
     id: form.id,
     local_prefix: form.local_prefix,
-    upstream_registry: form.upstream_registry,
-    upstream_prefix: form.upstream_prefix || null,
+    upstream_registry: normalizeRegistry(form.upstream_registry),
+    upstream_prefix: normalizeOptionalPrefix(form.upstream_prefix),
     warm_filters: warmFilter(form),
     warm_schedule: form.warm_schedule || null,
     plain_http: form.plain_http,
@@ -260,7 +261,7 @@ export default function ProxyCache() {
                     <td><code>{cache.id}</code></td>
                     <td>{cache.local_prefix}</td>
                     <td>
-                      {cache.upstream_registry}/{cache.upstream_prefix ?? ""}
+                      {upstreamLabel(cache.upstream_registry, cache.upstream_prefix)}
                       <span class="badge badge-gray inline-badge">{transportLabel(cache)}</span>
                     </td>
                     <td>{warmLabel(cache)}</td>

@@ -39,6 +39,39 @@ export function strategyLabel(strategy: MirrorStrategy): string {
   return strategy.pattern;
 }
 
+function trimBoundarySlashes(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === "/") start += 1;
+  while (end > start && value[end - 1] === "/") end -= 1;
+  return value.slice(start, end);
+}
+
+export function normalizeOptionalPrefix(prefix: string | null | undefined): string | null {
+  const trimmed = prefix?.trim();
+  if (!trimmed) return null;
+  const withoutBoundarySlashes = trimBoundarySlashes(trimmed).trim();
+  return withoutBoundarySlashes ? withoutBoundarySlashes : null;
+}
+
+export function normalizeRegistry(registry: string): string {
+  let normalized = registry.trim();
+  while (normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+export function upstreamLabel(registry: string, prefix: string | null | undefined): string {
+  const normalizedRegistry = normalizeRegistry(registry);
+  const normalizedPrefix = normalizeOptionalPrefix(prefix);
+  return normalizedPrefix ? `${normalizedRegistry}/${normalizedPrefix}` : normalizedRegistry;
+}
+
+export function prefixLabel(prefix: string | null | undefined, emptyLabel = "-"): string {
+  return normalizeOptionalPrefix(prefix) ?? emptyLabel;
+}
+
 export function manifestKind(manifest: Pick<ManifestSummary, "media_type" | "artifact_type">): {
   label: string;
   className: string;

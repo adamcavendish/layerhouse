@@ -49,6 +49,21 @@ fn normalize_optional(value: &mut Option<String>) {
     });
 }
 
+fn normalize_optional_prefix(value: &mut Option<String>) {
+    *value = value.take().and_then(|v| {
+        let trimmed = v.trim().trim_matches('/').to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+}
+
+fn normalize_registry(value: &mut String) {
+    *value = value.trim().trim_end_matches('/').to_string();
+}
+
 fn validate_outbound_proxy(proxy: &mut OutboundProxy) -> Result<(), LayerhouseError> {
     normalize_optional(&mut proxy.url);
     normalize_optional(&mut proxy.username);
@@ -142,13 +157,14 @@ fn validate_warm_filters(filters: &[WarmFilter]) -> Result<(), LayerhouseError> 
 fn validate_mirror_rule(rule: &mut MirrorRule) -> Result<(), LayerhouseError> {
     required(&rule.id, "id")?;
     required(&rule.local_prefix, "local_prefix")?;
+    normalize_registry(&mut rule.upstream_registry);
     required(&rule.upstream_registry, "upstream_registry")?;
     if rule.plain_http && rule.insecure_tls {
         return Err(LayerhouseError::NameInvalid(
             "plain_http and insecure_tls are mutually exclusive".to_string(),
         ));
     }
-    normalize_optional(&mut rule.upstream_prefix);
+    normalize_optional_prefix(&mut rule.upstream_prefix);
     normalize_optional(&mut rule.schedule);
     normalize_optional(&mut rule.username);
     normalize_optional(&mut rule.password);
@@ -159,13 +175,14 @@ fn validate_mirror_rule(rule: &mut MirrorRule) -> Result<(), LayerhouseError> {
 fn validate_proxy_cache(cache: &mut ProxyCache) -> Result<(), LayerhouseError> {
     required(&cache.id, "id")?;
     required(&cache.local_prefix, "local_prefix")?;
+    normalize_registry(&mut cache.upstream_registry);
     required(&cache.upstream_registry, "upstream_registry")?;
     if cache.plain_http && cache.insecure_tls {
         return Err(LayerhouseError::NameInvalid(
             "plain_http and insecure_tls are mutually exclusive".to_string(),
         ));
     }
-    normalize_optional(&mut cache.upstream_prefix);
+    normalize_optional_prefix(&mut cache.upstream_prefix);
     normalize_optional(&mut cache.warm_schedule);
     normalize_optional(&mut cache.username);
     normalize_optional(&mut cache.password);
@@ -748,6 +765,111 @@ mod tests {
             .expect("proxy cache should be saved");
         assert!(saved.insecure_tls);
         assert!(!saved.plain_http);
+    }
+
+    #[tokio::test]
+    async fn put_proxy_cache_treats_slash_upstream_prefix_as_empty() {
+        let state = test_state();
+        let app = router(state.clone());
+        let cache = serde_json::json!({
+            "id": "ignored",
+            "local_prefix": "mirror/docker",
+            "upstream_registry": "docker.io",
+            "upstream_prefix": " / ",
+            "warm_filters": [{ "type": "none" }]
+        });
+
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/admin/proxy-cache/docker")
+                    .header("content-type", "application/json")
+                    .body(Body::from(cache.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let saved = state
+            .core
+            .metadata
+            .get_proxy_cache("docker")
+            .await
+            .unwrap()
+            .expect("proxy cache should be saved");
+        assert_eq!(saved.upstream_prefix, None);
+    }
+
+    #[tokio::test]
+    async fn put_proxy_cache_trims_upstream_registry_trailing_slash() {
+        let state = test_state();
+        let app = router(state.clone());
+        let cache = serde_json::json!({
+            "id": "ignored",
+            "local_prefix": "mirror/docker",
+            "upstream_registry": " docker.io/ ",
+            "warm_filters": [{ "type": "none" }]
+        });
+
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/admin/proxy-cache/docker")
+                    .header("content-type", "application/json")
+                    .body(Body::from(cache.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let saved = state
+            .core
+            .metadata
+            .get_proxy_cache("docker")
+            .await
+            .unwrap()
+            .expect("proxy cache should be saved");
+        assert_eq!(saved.upstream_registry, "docker.io");
+    }
+
+    #[tokio::test]
+    async fn put_rule_trims_upstream_prefix_slashes() {
+        let state = test_state();
+        let app = router(state.clone());
+        let rule = serde_json::json!({
+            "id": "ignored",
+            "local_prefix": "mirror/docker",
+            "upstream_registry": "docker.io/",
+            "upstream_prefix": " /library/ ",
+            "strategy": { "type": "all" }
+        });
+
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PUT")
+                    .uri("/api/v1/admin/mirror/rules/docker")
+                    .header("content-type", "application/json")
+                    .body(Body::from(rule.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let saved = state
+            .core
+            .metadata
+            .get_mirror_rule("docker")
+            .await
+            .unwrap()
+            .expect("mirror rule should be saved");
+        assert_eq!(saved.upstream_registry, "docker.io");
+        assert_eq!(saved.upstream_prefix.as_deref(), Some("library"));
     }
 
     #[tokio::test]
