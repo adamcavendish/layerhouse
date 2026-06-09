@@ -26,6 +26,21 @@ use client::{
 
 const RULES_CACHE_TTL_SECS: u64 = 30;
 
+#[derive(Clone, Copy)]
+enum PullMode {
+    Eager,
+    Lazy,
+}
+
+impl PullMode {
+    fn dedup_segment(self) -> &'static str {
+        match self {
+            Self::Eager => "eager",
+            Self::Lazy => "lazy",
+        }
+    }
+}
+
 pub struct ResolvedMirrorJob {
     pub direction: MirrorDirection,
     pub local_repo: String,
@@ -86,16 +101,35 @@ impl MirrorManager {
     }
 
     fn default_mirror_upstream_repo(rule: &MirrorRule) -> String {
-        rule.upstream_prefix
-            .clone()
+        Self::normalize_upstream_prefix(rule.upstream_prefix.as_deref())
+            .map(ToString::to_string)
             .unwrap_or_else(|| rule.local_prefix.clone())
     }
 
     fn default_proxy_upstream_repo(cache: &ProxyCache) -> String {
-        cache
-            .upstream_prefix
-            .clone()
+        Self::normalize_upstream_prefix(cache.upstream_prefix.as_deref())
+            .map(ToString::to_string)
             .unwrap_or_else(|| cache.local_prefix.clone())
+    }
+
+    fn normalize_upstream_prefix(prefix: Option<&str>) -> Option<&str> {
+        prefix.and_then(|prefix| {
+            let trimmed = prefix.trim().trim_matches('/');
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        })
+    }
+
+    fn upstream_repo_from_prefix(prefix: Option<&str>, suffix: &str) -> Option<String> {
+        match (Self::normalize_upstream_prefix(prefix), suffix.is_empty()) {
+            (Some(prefix), true) => Some(prefix.to_string()),
+            (Some(prefix), false) => Some(format!("{}/{}", prefix, suffix)),
+            (None, true) => None,
+            (None, false) => Some(suffix.to_string()),
+        }
     }
 
     fn match_rule<'a>(
@@ -108,16 +142,10 @@ impl MirrorManager {
                 continue;
             }
             if let Some(suffix) = Self::prefix_suffix(repo_name, &rule.local_prefix) {
-                let upstream_repo = if let Some(ref prefix) = rule.upstream_prefix {
-                    if suffix.is_empty() {
-                        prefix.clone()
-                    } else {
-                        format!("{}/{}", prefix, suffix)
-                    }
-                } else if suffix.is_empty() {
+                let Some(upstream_repo) =
+                    Self::upstream_repo_from_prefix(rule.upstream_prefix.as_deref(), suffix)
+                else {
                     continue;
-                } else {
-                    suffix.to_string()
                 };
                 if best
                     .as_ref()
@@ -138,16 +166,10 @@ impl MirrorManager {
         let mut best: Option<(&ProxyCache, String)> = None;
         for cache in caches {
             if let Some(suffix) = Self::prefix_suffix(repo_name, &cache.local_prefix) {
-                let upstream_repo = if let Some(ref prefix) = cache.upstream_prefix {
-                    if suffix.is_empty() {
-                        prefix.clone()
-                    } else {
-                        format!("{}/{}", prefix, suffix)
-                    }
-                } else if suffix.is_empty() {
+                let Some(upstream_repo) =
+                    Self::upstream_repo_from_prefix(cache.upstream_prefix.as_deref(), suffix)
+                else {
                     continue;
-                } else {
-                    suffix.to_string()
                 };
                 if best
                     .as_ref()
@@ -423,6 +445,64 @@ impl MirrorManager {
         Ok(caches)
     }
 
+    pub async fn head_manifest<M: RegistryStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        metadata: &M,
+    ) -> Result<Option<client::ManifestHead>, LayerhouseError> {
+        if let Some(head) = self
+            .head_manifest_from_proxy_cache(repo_name, reference, metadata)
+            .await?
+        {
+            return Ok(Some(head));
+        }
+
+        let result = self
+            .head_manifest_from_mirror_rule(repo_name, reference, metadata)
+            .await?;
+        if result.is_none() {
+            tracing::warn!(
+                "head_manifest: no match for {}:{} (not in proxy cache or mirror rules)",
+                repo_name,
+                reference,
+            );
+        }
+        Ok(result)
+    }
+
+    async fn head_manifest_from_proxy_cache<M: RegistryStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        metadata: &M,
+    ) -> Result<Option<client::ManifestHead>, LayerhouseError> {
+        let caches = self.get_proxy_caches(metadata).await?;
+        let Some((cache, upstream_repo)) = Self::match_proxy_cache(&caches, repo_name) else {
+            return Ok(None);
+        };
+
+        let upstream = Self::make_proxy_upstream_ref(cache, &upstream_repo);
+        self.client.ensure_auth(&upstream).await?;
+        self.client.head_manifest(&upstream, reference).await
+    }
+
+    async fn head_manifest_from_mirror_rule<M: RegistryStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        metadata: &M,
+    ) -> Result<Option<client::ManifestHead>, LayerhouseError> {
+        let rules = self.get_rules(metadata).await?;
+        let Some((rule, upstream_repo)) = Self::match_rule(&rules, repo_name) else {
+            return Ok(None);
+        };
+
+        let upstream = Self::make_upstream_ref(rule, &upstream_repo);
+        self.client.ensure_auth(&upstream).await?;
+        self.client.head_manifest(&upstream, reference).await
+    }
+
     pub async fn pull_manifest<M: RegistryStore, B: BlobStore>(
         &self,
         repo_name: &str,
@@ -430,15 +510,38 @@ impl MirrorManager {
         metadata: &M,
         blobs: &B,
     ) -> Result<Option<ManifestEntry>, LayerhouseError> {
+        self.pull_manifest_with_mode(repo_name, reference, metadata, blobs, PullMode::Eager)
+            .await
+    }
+
+    pub async fn pull_manifest_lazy<M: RegistryStore, B: BlobStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        metadata: &M,
+        blobs: &B,
+    ) -> Result<Option<ManifestEntry>, LayerhouseError> {
+        self.pull_manifest_with_mode(repo_name, reference, metadata, blobs, PullMode::Lazy)
+            .await
+    }
+
+    async fn pull_manifest_with_mode<M: RegistryStore, B: BlobStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        metadata: &M,
+        blobs: &B,
+        mode: PullMode,
+    ) -> Result<Option<ManifestEntry>, LayerhouseError> {
         if let Some(result) = self
-            .pull_manifest_from_proxy_cache(repo_name, reference, metadata, blobs)
+            .pull_manifest_from_proxy_cache(repo_name, reference, metadata, blobs, mode)
             .await?
         {
             return Ok(Some(result));
         }
 
         let result = self
-            .pull_manifest_from_mirror_rule(repo_name, reference, metadata, blobs)
+            .pull_manifest_from_mirror_rule(repo_name, reference, metadata, blobs, mode)
             .await?;
         if result.is_none() {
             tracing::warn!(
@@ -456,13 +559,19 @@ impl MirrorManager {
         reference: &str,
         metadata: &M,
         blobs: &B,
+        mode: PullMode,
     ) -> Result<Option<ManifestEntry>, LayerhouseError> {
         let caches = self.get_proxy_caches(metadata).await?;
         let Some((cache, upstream_repo)) = Self::match_proxy_cache(&caches, repo_name) else {
             return Ok(None);
         };
 
-        let dedup_key = format!("proxy-cache:{}:{}", repo_name, reference);
+        let dedup_key = format!(
+            "proxy-cache:{}:{}:{}",
+            mode.dedup_segment(),
+            repo_name,
+            reference
+        );
 
         {
             let mut inflight = self.inflight.lock().await;
@@ -478,7 +587,7 @@ impl MirrorManager {
 
         let upstream = Self::make_proxy_upstream_ref(cache, &upstream_repo);
         let result = self
-            .do_pull(repo_name, reference, &upstream, metadata, blobs)
+            .do_pull(repo_name, reference, &upstream, metadata, blobs, mode)
             .await;
 
         let notify = self.inflight.lock().await.remove(&dedup_key);
@@ -495,6 +604,7 @@ impl MirrorManager {
         reference: &str,
         metadata: &M,
         blobs: &B,
+        mode: PullMode,
     ) -> Result<Option<ManifestEntry>, LayerhouseError> {
         let rules = self.get_rules(metadata).await?;
 
@@ -506,7 +616,7 @@ impl MirrorManager {
             return Ok(None);
         };
 
-        let dedup_key = format!("{}:{}", repo_name, reference);
+        let dedup_key = format!("{}:{}:{}", mode.dedup_segment(), repo_name, reference);
 
         {
             let mut inflight = self.inflight.lock().await;
@@ -522,7 +632,7 @@ impl MirrorManager {
 
         let upstream = Self::make_upstream_ref(rule, &upstream_repo);
         let result = self
-            .do_pull(repo_name, reference, &upstream, metadata, blobs)
+            .do_pull(repo_name, reference, &upstream, metadata, blobs, mode)
             .await;
 
         let notify = self.inflight.lock().await.remove(&dedup_key);
@@ -662,11 +772,12 @@ impl MirrorManager {
         upstream: &UpstreamRef,
         metadata: &M,
         blobs: &B,
+        mode: PullMode,
     ) -> Result<Option<ManifestEntry>, LayerhouseError> {
         self.client.ensure_auth(upstream).await?;
 
         let upstream_head = self.client.head_manifest(upstream, reference).await?;
-        let Some((upstream_digest, _)) = upstream_head else {
+        let Some(upstream_head) = upstream_head else {
             tracing::warn!(
                 "upstream manifest not found: {}/{}:{} ({}://{}/v2/{}/manifests/{})",
                 upstream.registry,
@@ -681,23 +792,60 @@ impl MirrorManager {
         };
 
         if let Ok(Some(local)) = metadata.get_manifest(repo_name, reference).await
-            && local.digest.to_string() == upstream_digest
+            && local.digest.to_string() == upstream_head.digest
         {
+            if let PullMode::Eager = mode {
+                let manifest_data = client::ManifestData {
+                    body: local.body.clone(),
+                    content_type: local.content_type.clone(),
+                    digest: local.digest.to_string(),
+                };
+                self.store_manifest_recursive(
+                    repo_name,
+                    reference,
+                    &manifest_data,
+                    upstream,
+                    metadata,
+                    blobs,
+                )
+                .await?;
+            }
             return Ok(Some(local));
         }
 
         let manifest_data = self.client.get_manifest(upstream, reference).await?;
-        self.store_manifest_recursive(
-            repo_name,
-            reference,
-            &manifest_data,
-            upstream,
-            metadata,
-            blobs,
-        )
-        .await?;
+        match mode {
+            PullMode::Eager => {
+                self.store_manifest_recursive(
+                    repo_name,
+                    reference,
+                    &manifest_data,
+                    upstream,
+                    metadata,
+                    blobs,
+                )
+                .await?;
+            }
+            PullMode::Lazy => {
+                self.store_manifest_only(repo_name, reference, &manifest_data, metadata)
+                    .await?;
+            }
+        }
 
         metadata.get_manifest(repo_name, reference).await
+    }
+
+    async fn store_manifest_only<M: ManifestStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        manifest_data: &client::ManifestData,
+        metadata: &M,
+    ) -> Result<(), LayerhouseError> {
+        let parsed: serde_json::Value = serde_json::from_slice(&manifest_data.body)
+            .map_err(|e| LayerhouseError::Upstream(format!("invalid manifest JSON: {}", e)))?;
+        self.put_manifest_entry(repo_name, reference, manifest_data, metadata, &parsed)
+            .await
     }
 
     async fn store_manifest_recursive<M: RegistryStore, B: BlobStore>(
@@ -709,43 +857,110 @@ impl MirrorManager {
         metadata: &M,
         blobs: &B,
     ) -> Result<(), LayerhouseError> {
-        let parsed: serde_json::Value = serde_json::from_slice(&manifest_data.body)
-            .map_err(|e| LayerhouseError::Upstream(format!("invalid manifest JSON: {}", e)))?;
-
-        if is_index_manifest(&manifest_data.content_type) {
-            let children = extract_child_manifests(&parsed);
-            for child in &children {
-                if metadata
-                    .get_manifest(repo_name, &child.digest)
-                    .await
-                    .ok()
-                    .flatten()
-                    .is_some()
-                {
-                    continue;
-                }
-
-                let child_manifest = self.client.get_manifest(upstream, &child.digest).await?;
-                Box::pin(self.store_manifest_recursive(
-                    repo_name,
-                    &child.digest,
-                    &child_manifest,
-                    upstream,
-                    metadata,
-                    blobs,
-                ))
-                .await?;
-            }
-        } else {
-            let blob_descs = extract_blob_descriptors(&parsed);
-            self.pull_blobs(&blob_descs, upstream, blobs).await?;
+        enum Frame {
+            Process {
+                reference: String,
+                manifest_data: client::ManifestData,
+            },
+            Store {
+                reference: String,
+                manifest_data: client::ManifestData,
+                parsed: serde_json::Value,
+            },
         }
 
+        let mut stack = vec![Frame::Process {
+            reference: reference.to_string(),
+            manifest_data: manifest_data.clone(),
+        }];
+        let mut visited = std::collections::BTreeSet::new();
+
+        while let Some(frame) = stack.pop() {
+            match frame {
+                Frame::Process {
+                    reference,
+                    manifest_data,
+                } => {
+                    let manifest_digest = Digest::sha256(&manifest_data.body).to_string();
+                    if !visited.insert(manifest_digest) {
+                        continue;
+                    }
+
+                    let parsed: serde_json::Value = serde_json::from_slice(&manifest_data.body)
+                        .map_err(|e| {
+                            LayerhouseError::Upstream(format!("invalid manifest JSON: {}", e))
+                        })?;
+
+                    if is_index_manifest(&manifest_data.content_type) {
+                        let children = extract_child_manifests(&parsed);
+                        stack.push(Frame::Store {
+                            reference,
+                            manifest_data,
+                            parsed,
+                        });
+                        for child in children.into_iter().rev() {
+                            let child_manifest = if let Some(existing) =
+                                metadata.get_manifest(repo_name, &child.digest).await?
+                            {
+                                client::ManifestData {
+                                    body: existing.body,
+                                    content_type: existing.content_type,
+                                    digest: existing.digest.to_string(),
+                                }
+                            } else {
+                                self.client.get_manifest(upstream, &child.digest).await?
+                            };
+                            stack.push(Frame::Process {
+                                reference: child.digest,
+                                manifest_data: child_manifest,
+                            });
+                        }
+                    } else {
+                        let blob_descs = extract_blob_descriptors(&parsed);
+                        self.pull_blobs(&blob_descs, upstream, blobs).await?;
+                        self.put_manifest_entry(
+                            repo_name,
+                            &reference,
+                            &manifest_data,
+                            metadata,
+                            &parsed,
+                        )
+                        .await?;
+                    }
+                }
+                Frame::Store {
+                    reference,
+                    manifest_data,
+                    parsed,
+                } => {
+                    self.put_manifest_entry(
+                        repo_name,
+                        &reference,
+                        &manifest_data,
+                        metadata,
+                        &parsed,
+                    )
+                    .await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn put_manifest_entry<M: ManifestStore>(
+        &self,
+        repo_name: &str,
+        reference: &str,
+        manifest_data: &client::ManifestData,
+        metadata: &M,
+        parsed: &serde_json::Value,
+    ) -> Result<(), LayerhouseError> {
         let digest = Digest::sha256(&manifest_data.body);
-        let referenced_blobs = manifest::extract_referenced_digests(&parsed);
+        let referenced_blobs = manifest::extract_referenced_digests(parsed);
 
         let entry = ManifestEntry::from_parsed_json(
-            &parsed,
+            parsed,
             manifest_data.content_type.clone(),
             manifest_data.body.clone(),
             referenced_blobs,
@@ -940,9 +1155,9 @@ mod tests {
     };
     use axum::body::Body;
     use axum::extract::State;
-    use axum::http::{HeaderMap, StatusCode};
+    use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
     use axum::response::IntoResponse;
-    use axum::routing::{head, post, put};
+    use axum::routing::{get, head, post, put};
     use bytes::Bytes;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use tokio::sync::Mutex as TokioMutex;
@@ -963,6 +1178,288 @@ mod tests {
             last_modified,
             config_summary: None,
         }
+    }
+
+    #[derive(Clone)]
+    struct PullCapture {
+        index_body: Bytes,
+        index_digest: String,
+        child_body: Bytes,
+        child_digest: String,
+        blob_body: Bytes,
+        blob_digest: String,
+        index_heads: Arc<AtomicUsize>,
+        index_gets: Arc<AtomicUsize>,
+        child_gets: Arc<AtomicUsize>,
+        blob_gets: Arc<AtomicUsize>,
+    }
+
+    fn response_with_manifest_headers(
+        status: StatusCode,
+        body: Option<Bytes>,
+        digest: &str,
+        content_type: &str,
+        content_length: usize,
+    ) -> axum::response::Response {
+        let mut response = match body {
+            Some(body) => (status, body).into_response(),
+            None => status.into_response(),
+        };
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_str(content_type).expect("valid content type"),
+        );
+        response.headers_mut().insert(
+            "Docker-Content-Digest",
+            HeaderValue::from_str(digest).expect("valid digest header"),
+        );
+        response.headers_mut().insert(
+            header::CONTENT_LENGTH,
+            HeaderValue::from_str(&content_length.to_string()).expect("valid content length"),
+        );
+        response
+    }
+
+    async fn start_pull_registry() -> (String, PullCapture) {
+        const INDEX_CT: &str = "application/vnd.oci.image.index.v1+json";
+        const MANIFEST_CT: &str = "application/vnd.oci.image.manifest.v1+json";
+
+        let blob_body = Bytes::from_static(b"lazy blob");
+        let blob_digest = Digest::sha256(&blob_body).to_string();
+        let child_body = Bytes::from(format!(
+            r#"{{
+                "schemaVersion": 2,
+                "mediaType": "{MANIFEST_CT}",
+                "config": {{
+                    "mediaType": "application/vnd.oci.image.config.v1+json",
+                    "digest": "{blob_digest}",
+                    "size": {}
+                }},
+                "layers": []
+            }}"#,
+            blob_body.len()
+        ));
+        let child_digest = Digest::sha256(&child_body).to_string();
+        let index_body = Bytes::from(format!(
+            r#"{{
+                "schemaVersion": 2,
+                "mediaType": "{INDEX_CT}",
+                "manifests": [{{
+                    "mediaType": "{MANIFEST_CT}",
+                    "digest": "{child_digest}",
+                    "size": {},
+                    "platform": {{ "os": "linux", "architecture": "amd64" }}
+                }}]
+            }}"#,
+            child_body.len()
+        ));
+        let index_digest = Digest::sha256(&index_body).to_string();
+        let capture = PullCapture {
+            index_body,
+            index_digest,
+            child_body,
+            child_digest,
+            blob_body,
+            blob_digest,
+            index_heads: Arc::new(AtomicUsize::new(0)),
+            index_gets: Arc::new(AtomicUsize::new(0)),
+            child_gets: Arc::new(AtomicUsize::new(0)),
+            blob_gets: Arc::new(AtomicUsize::new(0)),
+        };
+
+        let app = axum::Router::new()
+            .route("/v2/", get(|| async { StatusCode::OK }))
+            .route(
+                "/v2/upstream/app/manifests/latest",
+                get(|State(capture): State<PullCapture>| async move {
+                    capture.index_gets.fetch_add(1, Ordering::SeqCst);
+                    response_with_manifest_headers(
+                        StatusCode::OK,
+                        Some(capture.index_body.clone()),
+                        &capture.index_digest,
+                        INDEX_CT,
+                        capture.index_body.len(),
+                    )
+                })
+                .head(|State(capture): State<PullCapture>| async move {
+                    capture.index_heads.fetch_add(1, Ordering::SeqCst);
+                    response_with_manifest_headers(
+                        StatusCode::OK,
+                        None,
+                        &capture.index_digest,
+                        INDEX_CT,
+                        capture.index_body.len(),
+                    )
+                }),
+            )
+            .route(
+                "/v2/upstream/app/manifests/{digest}",
+                get(|State(capture): State<PullCapture>| async move {
+                    capture.child_gets.fetch_add(1, Ordering::SeqCst);
+                    response_with_manifest_headers(
+                        StatusCode::OK,
+                        Some(capture.child_body.clone()),
+                        &capture.child_digest,
+                        MANIFEST_CT,
+                        capture.child_body.len(),
+                    )
+                }),
+            )
+            .route(
+                "/v2/upstream/app/blobs/{digest}",
+                get(|State(capture): State<PullCapture>| async move {
+                    capture.blob_gets.fetch_add(1, Ordering::SeqCst);
+                    (StatusCode::OK, capture.blob_body.clone()).into_response()
+                }),
+            )
+            .with_state(capture.clone());
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind pull registry");
+        let addr = listener.local_addr().expect("pull registry addr");
+        tokio::spawn(async move {
+            axum::serve(listener, app)
+                .await
+                .expect("serve pull registry");
+        });
+
+        (addr.to_string(), capture)
+    }
+
+    fn test_proxy_cache(upstream_prefix: Option<&str>) -> ProxyCache {
+        ProxyCache {
+            id: "cache".to_string(),
+            local_prefix: "cache/app".to_string(),
+            upstream_registry: "registry.example".to_string(),
+            upstream_prefix: upstream_prefix.map(ToString::to_string),
+            warm_filters: vec![WarmFilter::None],
+            warm_schedule: None,
+            plain_http: true,
+            insecure_tls: false,
+            outbound_proxy: OutboundProxy::default(),
+            username: None,
+            password: None,
+            created_at: 1,
+        }
+    }
+
+    async fn put_proxy_cache(metadata: &InMemoryMetadataStore, registry: String) {
+        metadata
+            .put_proxy_cache(ProxyCache {
+                upstream_registry: registry,
+                upstream_prefix: Some("upstream/app".to_string()),
+                ..test_proxy_cache(None)
+            })
+            .await
+            .expect("put proxy cache");
+    }
+
+    #[test]
+    fn slash_only_upstream_prefix_maps_to_repo_suffix() {
+        let caches = [ProxyCache {
+            local_prefix: "mirror/docker".to_string(),
+            upstream_prefix: Some("/".to_string()),
+            ..test_proxy_cache(None)
+        }];
+
+        let (_, upstream_repo) =
+            MirrorManager::match_proxy_cache(&caches, "mirror/docker/library/alpine")
+                .expect("proxy cache should match");
+
+        assert_eq!(upstream_repo, "library/alpine");
+        assert!(MirrorManager::match_proxy_cache(&caches, "mirror/docker").is_none());
+    }
+
+    #[test]
+    fn upstream_prefix_mapping_trims_boundary_slashes() {
+        let caches = [ProxyCache {
+            local_prefix: "mirror/docker".to_string(),
+            upstream_prefix: Some(" /library/ ".to_string()),
+            ..test_proxy_cache(None)
+        }];
+
+        let (_, upstream_repo) = MirrorManager::match_proxy_cache(&caches, "mirror/docker/alpine")
+            .expect("proxy cache should match");
+
+        assert_eq!(upstream_repo, "library/alpine");
+    }
+
+    #[tokio::test]
+    async fn proxy_cache_head_and_lazy_pull_do_not_prefetch_index_children_or_blobs() {
+        let (registry, capture) = start_pull_registry().await;
+        let manager = MirrorManager::new();
+        let metadata = InMemoryMetadataStore::default();
+        let blob_store = crate::store::blob::InMemoryBlobStore::default();
+        put_proxy_cache(&metadata, registry).await;
+
+        let head = manager
+            .head_manifest("cache/app", "latest", &metadata)
+            .await
+            .expect("head manifest")
+            .expect("upstream head");
+
+        assert_eq!(head.digest, capture.index_digest);
+        assert_eq!(head.content_type, "application/vnd.oci.image.index.v1+json");
+        assert_eq!(head.content_length, Some(capture.index_body.len() as u64));
+        assert!(
+            metadata
+                .get_manifest("cache/app", "latest")
+                .await
+                .expect("get manifest")
+                .is_none()
+        );
+        assert_eq!(capture.index_heads.load(Ordering::SeqCst), 1);
+        assert_eq!(capture.index_gets.load(Ordering::SeqCst), 0);
+        assert_eq!(capture.child_gets.load(Ordering::SeqCst), 0);
+        assert_eq!(capture.blob_gets.load(Ordering::SeqCst), 0);
+
+        let entry = manager
+            .pull_manifest_lazy("cache/app", "latest", &metadata, &blob_store)
+            .await
+            .expect("lazy pull manifest")
+            .expect("manifest entry");
+
+        assert_eq!(entry.digest.to_string(), capture.index_digest);
+        assert_eq!(capture.index_gets.load(Ordering::SeqCst), 1);
+        assert_eq!(capture.child_gets.load(Ordering::SeqCst), 0);
+        assert_eq!(capture.blob_gets.load(Ordering::SeqCst), 0);
+        assert!(
+            blob_store
+                .stat(&Digest::from_str_checked(&capture.blob_digest).expect("valid blob digest"))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn eager_pull_hydrates_after_lazy_manifest_cache_hit() {
+        let (registry, capture) = start_pull_registry().await;
+        let manager = MirrorManager::new();
+        let metadata = InMemoryMetadataStore::default();
+        let blob_store = crate::store::blob::InMemoryBlobStore::default();
+        put_proxy_cache(&metadata, registry).await;
+
+        manager
+            .pull_manifest_lazy("cache/app", "latest", &metadata, &blob_store)
+            .await
+            .expect("lazy pull manifest")
+            .expect("manifest entry");
+        assert_eq!(capture.child_gets.load(Ordering::SeqCst), 0);
+        assert_eq!(capture.blob_gets.load(Ordering::SeqCst), 0);
+
+        manager
+            .pull_manifest("cache/app", "latest", &metadata, &blob_store)
+            .await
+            .expect("eager pull manifest")
+            .expect("manifest entry");
+
+        assert_eq!(capture.child_gets.load(Ordering::SeqCst), 1);
+        assert_eq!(capture.blob_gets.load(Ordering::SeqCst), 1);
+        blob_store
+            .stat(&Digest::from_str_checked(&capture.blob_digest).expect("valid blob digest"))
+            .await
+            .expect("eager pull should hydrate blob");
     }
 
     #[tokio::test]

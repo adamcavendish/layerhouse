@@ -10,6 +10,7 @@ use http_body_util::{BodyExt, StreamBody};
 use tokio::sync::RwLock;
 
 use crate::error::LayerhouseError;
+use crate::oci::digest::Digest;
 
 /// Strip credentials and path from a proxy URL for safe logging.
 fn redact_proxy_url(url: &str) -> String {
@@ -131,6 +132,7 @@ impl UpstreamRef {
     }
 }
 
+#[derive(Clone)]
 pub struct ManifestData {
     pub body: Vec<u8>,
     pub content_type: String,
@@ -139,6 +141,13 @@ pub struct ManifestData {
         reason = "kept from upstream Docker-Content-Digest for future verification"
     )]
     pub digest: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ManifestHead {
+    pub digest: String,
+    pub content_type: String,
+    pub content_length: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -561,7 +570,7 @@ impl UpstreamClient {
         &self,
         upstream: &UpstreamRef,
         reference: &str,
-    ) -> Result<Option<(String, String)>, LayerhouseError> {
+    ) -> Result<Option<ManifestHead>, LayerhouseError> {
         let url = format!(
             "{}/v2/{}/manifests/{}",
             upstream.base_url(),
@@ -578,15 +587,35 @@ impl UpstreamClient {
                     .headers()
                     .get("docker-content-digest")
                     .and_then(|v| v.to_str().ok())
-                    .unwrap_or("")
-                    .to_string();
+                    .map(ToString::to_string);
                 let ct = resp
                     .headers()
                     .get("content-type")
                     .and_then(|v| v.to_str().ok())
                     .unwrap_or("application/octet-stream")
                     .to_string();
-                Ok(Some((digest, ct)))
+                let content_length = resp
+                    .headers()
+                    .get("content-length")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse::<u64>().ok());
+                let Some(digest) = digest.filter(|digest| !digest.is_empty()) else {
+                    tracing::warn!(
+                        "upstream HEAD manifest {} omitted Docker-Content-Digest; falling back to GET",
+                        reference
+                    );
+                    let manifest = self.get_manifest(upstream, reference).await?;
+                    return Ok(Some(ManifestHead {
+                        digest: Digest::sha256(&manifest.body).to_string(),
+                        content_type: manifest.content_type,
+                        content_length: Some(manifest.body.len() as u64),
+                    }));
+                };
+                Ok(Some(ManifestHead {
+                    digest,
+                    content_type: ct,
+                    content_length,
+                }))
             }
             StatusCode::NOT_FOUND => Ok(None),
             s => Err(LayerhouseError::Upstream(format!(

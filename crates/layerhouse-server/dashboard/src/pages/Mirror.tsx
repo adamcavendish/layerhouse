@@ -18,7 +18,7 @@ import type {
   OutboundProxyProtocol,
   SyncJob,
 } from "../lib/types";
-import { formatAgo, formatTime, strategyLabel } from "../lib/format";
+import { formatAgo, formatTime, normalizeOptionalPrefix, normalizeRegistry, strategyLabel, upstreamLabel } from "../lib/format";
 import { t } from "../lib/i18n";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
@@ -79,8 +79,8 @@ function toPayload(form: RuleForm): MirrorRuleCreate {
     id: form.id,
     direction: form.direction,
     local_prefix: form.local_prefix,
-    upstream_registry: form.upstream_registry,
-    upstream_prefix: form.upstream_prefix || null,
+    upstream_registry: normalizeRegistry(form.upstream_registry),
+    upstream_prefix: normalizeOptionalPrefix(form.upstream_prefix),
     schedule: form.type === "scheduled" ? form.schedule : null,
     strategy: toStrategy(form),
     plain_http: form.plain_http,
@@ -282,7 +282,7 @@ export default function Mirror() {
                       </td>
                       <td>{rule.local_prefix}</td>
                       <td>
-                        {rule.upstream_registry}/{rule.upstream_prefix ?? ""}
+                        {upstreamLabel(rule.upstream_registry, rule.upstream_prefix)}
                         <span class="badge badge-gray inline-badge">{transportLabel(rule)}</span>
                       </td>
                       <td>{strategyLabel(rule.strategy)}</td>

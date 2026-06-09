@@ -11,6 +11,7 @@ import {
   deleteMirrorRule,
 } from "../lib/api";
 import type { MirrorRule, MirrorRuleCreate } from "../lib/types";
+import { normalizeOptionalPrefix, normalizeRegistry, prefixLabel } from "../lib/format";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 import ErrorBanner from "../components/ErrorBanner";
@@ -67,8 +68,8 @@ export default function MirrorRules() {
         id: f.id,
         direction: f.direction,
         local_prefix: f.local_prefix,
-        upstream_registry: f.upstream_registry,
-        upstream_prefix: f.upstream_prefix || undefined,
+        upstream_registry: normalizeRegistry(f.upstream_registry),
+        upstream_prefix: normalizeOptionalPrefix(f.upstream_prefix),
         strategy: f.strategy,
         plain_http: f.plain_http,
         insecure_tls: f.insecure_tls,
@@ -172,7 +173,7 @@ export default function MirrorRules() {
                     </td>
                     <td>{rule.local_prefix}</td>
                     <td>{rule.upstream_registry}</td>
-                    <td>{rule.upstream_prefix ?? "-"}</td>
+                    <td>{prefixLabel(rule.upstream_prefix)}</td>
                     <td>
                       {rule.plain_http
                         ? "Plain"

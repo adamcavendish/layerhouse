@@ -56,10 +56,12 @@ async fn stat_or_pull<M: RegistryStore, B: BlobStore>(
         Err(e) => return Err(e),
     }
 
-    match state
-        .mirror
-        .pull_blob(name, digest, &state.core.metadata, &state.core.blobs)
-        .await
+    match Box::pin(
+        state
+            .mirror
+            .pull_blob(name, digest, &state.core.metadata, &state.core.blobs),
+    )
+    .await
     {
         Ok(true) => state
             .core
